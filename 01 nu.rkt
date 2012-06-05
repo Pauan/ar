@@ -249,24 +249,39 @@
               (cons (car kwa) acc2)
               res))))
 
-(define (process-keywords kw kwa args1)
-  (awith (x     args1
-          kw    (reverse kw)
-          kwa   (reverse kwa)
+(define (process-keywords kw kwa args)
+  (withs (kws   (if (null? kw)
+                    kw
+                    (zip kw kwa))
+          args  (alet x args
+                  (if (null? x)
+                        x
+                      (keyword? (car x))
+                        (begin (set! kws (cons (list (car x) (cadr x)) kws))
+                               (self (cddr x)))
+                      (cons (car x) (self (cdr x))))))
+    (if (null? kws)
+        (values kws kws args)
+        ;; WOW Racket seriously expects the keyword list to be *sorted*?
+        (let/ kws (apply zip (sort kws keyword<? #:key car))
+          (values (car kws) (cadr kws) args)))))
+
+  #|(awith (x     args
+          kws   (if (null? kw)
+                    kw
+                    (zip kw kwa))
           args  null)
     (if (null? x)
-          (values (reverse kw)
-                  (reverse kwa)
-                  (reverse args))
+          (if (null? kws)
+              (values kws kws (reverse args))
+              ;; WOW Racket seriously expects the keyword list to be *sorted*?
+              (let/ kws (apply zip (sort kws keyword<? #:key car))
+                (values (car kws) (cadr kws) (reverse args))))
         (keyword? (car x))
-          (let/ n (if (null? (cdr x))
-                      null
-                      #f)
-            (self (or n (cddr x))
-                  (cons (car x) kw)
-                  (cons (or n (cadr x)) kwa)
-                  args))
-        (self (cdr x) kw kwa (cons (car x) args)))))
+          (self (cddr x)
+                (cons (list (car x) (cadr x)) kws)
+                args)
+        (self (cdr x) kws (cons (car x) args))))|#
 
 (define (keyword-args? args)
   (alet x args
@@ -1286,6 +1301,7 @@
                                                (fn-let*)
                                                (ac-all (fn-body)))))))))
       (if (fn-keyword)
+          ;; TODO: how big is the performance hit of using make-keyword-procedure?
           (list make-keyword-procedure x)
           x))))
 
@@ -1750,22 +1766,13 @@
   (apply #%call f (arg-list* args)))|#
 
 ;; TODO: how slow is this compared to the above definition...?
-;; TODO: apply should support keywords in a list, like so:
-;;         (apply foo '(:bar 5 :qux 10))
-;; TODO: functions should be able to accept rest keywords:
-;;         ((fn :foo foo) :bar 1 :qux 2) -> (:bar 1 :qux 2)
-;;       alternatively, just hack it onto the existing rest argument support:
-;;         ((fn foo foo) :bar 1 :qux 2) -> (:bar 1 :qux 2)
-;;       this is cleanest, but it does mean functions will get a slight
-;;       performance hit when they have a rest arg
-;; TODO: how big is the performance hit?
 (sset apply (f . args)
   (make-keyword-procedure
     (lambda (kw kwa f . args)
-      (let/ (kw kwa args) (process-keywords kw kwa args)
+      (let/ (kw kwa args) (process-keywords kw kwa (arg-list* args))
         (if (procedure? f)
-            (keyword-apply f kw kwa (arg-list* args))
-            (keyword-apply ref kw kwa f (arg-list* args)))))))
+            (keyword-apply f kw kwa args)
+            (keyword-apply ref kw kwa f args))))))
 
 ;; TODO: make this better
 (sdef atomic-invoke (f)

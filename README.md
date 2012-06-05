@@ -85,8 +85,8 @@ Why would you want to use it over Arc 3.1 or Anarki, then?
             (apply foo args))
 
         > (proxy :bar 10)
-        (#:bar 10)
-        (1 2)
+        (:bar 10)
+        (10 5)
 
         > (apply foo :bar 10 nil)
         (10 5)
@@ -94,9 +94,9 @@ Why would you want to use it over Arc 3.1 or Anarki, then?
         > (apply foo '(:bar 10))
         (10 5)
 
-    Functions receive the keyword arguments in their rest arg, and `apply`
-    works with keyword args too. This means you don't need to muck around
-    with `make-keyword-procedure` or `keyword-apply` at all. Much cleaner.
+    Functions receive the keyword arguments in their rest arg and `apply`
+    works too. This means you don't need to muck around with
+    `make-keyword-procedure` or `keyword-apply` at all. Much cleaner.
 
   * The REPL is implemented **substantially** better:
 
