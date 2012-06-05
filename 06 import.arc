@@ -11,8 +11,9 @@
     (apply prn args))) ;(intersperse " " )
 
 
-(parameter import-dirs     (list cwd
-                                 exec-dir
+(parameter import-dirs     (list absdir.script-src
+                                 ;cwd
+                                 ;exec-dir
                                  (exec-path "lib/")))
 (parameter import-cache    (hash (exec-path "02 arc.arc")            t
                                  (exec-path "lib/01 utils.arc")      t

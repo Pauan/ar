@@ -1,3 +1,6 @@
+; Modified from Arc 3.1:
+;   - better URI encoding
+
 ; Matching.  Spun off 29 Jul 06.
 
 ; arc> (tostring (writec (coerce 133 'char)))
@@ -53,31 +56,62 @@
            (a (cut s (+ p 1)))))
      (cons -1 (positions test s)))))
 
+
 ; > (require (lib "uri-codec.ss" "net"))
 ;> (form-urlencoded-decode "x%ce%bbx")
 ;"xλx"
 
-; first byte: 0-7F, 1 char; c2-df 2; e0-ef 3, f0-f4 4. 
+; first byte: 0-7F, 1 char; c2-df 2; e0-ef 3, f0-f4 4.
 
 ; Fixed for utf8 by pc.
 
+(def uri-unreserved? (c)
+  (or (<= #\a c #\z)
+      (<= #\A c #\Z)
+      (<= #\0 c #\9)
+      (in c #\- #\_ #\. #\~)))
+
+(def uri-reserved? (c)
+  (no uri-unreserved.c))
+
+(def uri-special? (c)
+  (in c #\# #\& #\+ #\/ #\: #\; #\= #\? #\@))
+
+(def uri-path? (c)
+  (is c #\/))
+
 (def urldecode (s)
- (tostring
-  (forlen i s
+  (tostring:forlen i s
     (caselet c (s i)
       #\+ (writec #\space)
       #\% (do (when (> (- (len s) i) 2)
                 (writeb (int (cut s (+ i 1) (+ i 3)) 16)))
               (++ i 2))
-          (writec c)))))
+          (writec c))))
+
+(def percent-encode (c)
+                   ;; Fix for multi-byte Unicode characters
+                   ;; TODO: Nu specific
+  (tostring:each i (%.bytes->list (%.string->bytes/utf-8 string.c))
+    (writec #\%)
+    (if (< i 16) (writec #\0))
+    (pr:coerce i 'string 16)))
+
+(def percent-encode-if (f s)
+  (tostring:each c s
+    (if f.c
+        writec.c
+        (pr percent-encode.c))))
+
+(def urlencode-fragment (s)
+  (percent-encode-if uri-unreserved? s))
+
+(def urlencode-path (s)
+  (percent-encode-if (orf uri-unreserved? uri-path?) s))
 
 (def urlencode (s)
-  (tostring 
-    (each c s 
-      (writec #\%)
-      (let i (int c)
-        (if (< i 16) (writec #\0))
-        (pr (coerce i 'string 16))))))
+  (percent-encode-if (orf uri-unreserved? uri-special?) s))
+
 
 (mac litmatch (pat string (o start 0))
   (w/uniq (gstring gstart)
@@ -91,7 +125,7 @@
 
 ; litmatch would be cleaner if map worked for string and integer args:
 
-;             ,@(map (fn (n c)  
+;             ,@(map (fn (n c)
 ;                      `(is ,c (,gstring (+ ,gstart ,n))))
 ;                    (len pat)
 ;                    pat)
@@ -102,7 +136,7 @@
        (unless (> ,(len pat) (len ,gstring))
          (and ,@(let acc nil
                   (forlen i pat
-                    (push `(is ,(pat (- (len pat) 1 i)) 
+                    (push `(is ,(pat (- (len pat) 1 i))
                                (,gstring (- ,glen 1 ,i)))
                            acc))
                   (rev acc)))))))
@@ -117,9 +151,9 @@
     nil))
 
 (def headmatch (pat seq (o start 0))
-  (let p (len pat) 
-    ((afn (i)      
-       (or (is i p) 
+  (let p (len pat)
+    ((afn (i)
+       (or (is i p)
            (and (is (pat i) (seq (+ i start)))
                 (self (+ i 1)))))
      0)))
@@ -130,7 +164,7 @@
 
 (def subst (new old seq)
   (let boundary (+ (- (len seq) (len old)) 1)
-    (tostring 
+    (tostring
       (forlen i seq
         (if (and (< i boundary) (headmatch old seq i))
             (do (++ i (- (len old) 1))
@@ -138,7 +172,7 @@
             (pr (seq i)))))))
 
 (def multisubst (pairs seq)
-  (tostring 
+  (tostring
     (forlen i seq
       (iflet (old new) (find [begins seq (car _) i] pairs)
         (do (++ i (- (len old) 1))
@@ -162,7 +196,7 @@
   (withs (f   (testify test)
            p1 (pos ~f s))
     (if p1
-        (cut s 
+        (cut s
              (if (in where 'front 'both) p1 0)
              (when (in where 'end 'both)
                (let i (- (len s) 1)
@@ -171,7 +205,7 @@
                  (+ i 1))))
         "")))
 
-(def num (n (o digits 2) (o trail-zeros nil) (o init-zero nil))
+(def commafy (n (o digits 2) (o trail-zeros nil) (o init-zero nil))
   (withs (comma
           (fn (i)
             (tostring
@@ -191,8 +225,8 @@
                          m (/ (roundup (* a d)) d)
                          i (trunc m)
                          r (abs (trunc (- (* m d) (* i d)))))
-                   (+ (if (is i 0) 
-                          (if (or init-zero (is r 0)) "0" "") 
+                   (+ (if (is i 0)
+                          (if (or init-zero (is r 0)) "0" "")
                           (comma i))
                       (withs (rest   (string r)
                               padded (+ (newstring (- digits (len rest)) #\0)
@@ -205,7 +239,7 @@
     (if (and (< n 0) (find [and (digit _) (isnt _ #\0)] abrep))
         (+ "-" abrep)
         abrep)))
-        
+
 
 ; English
 

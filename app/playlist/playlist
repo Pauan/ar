@@ -1,31 +1,52 @@
 #! /usr/bin/env arc
 
 ;; TODO: import is Nu specific
-(import strings sxml boyer-moore) ; parse-script-args
+(import strings sxml boyer-moore parse-script-args) ; parse-script-args
 
 ;; TODO: parameter is Nu specific
 (parameter current-playlist)
+;(parameter current-asserts)
 (parameter processed-trace) ;; infinite loop detection
 
 (= files-by-title   (obj)
    processed        (obj)
+   asserts          (obj)
+   all-files        nil
+
+   options          (obj)
 
    playlist-errors  (obj)
    other-errors     nil)
 
-;; TODO
-#|(parse-script-args
-  ("-v" "--verbose" (= verbose t)))|#
-
 
 ;; TODO: should be in strings.arc
-(def xml-encode (s)
+#|(def xml-encode (s)
   (multisubst '(("&" "&amp;")
-                ("<" "&lt;")) s))
+                ("<" "&lt;")) s))|#
+
+(def encode-path (s)
+                    ;; TODO: relies on Nu specific changes to lib/strings.arc
+  (string "file://" (urlencode-path:string cwd s)))
+;  (urlencode:multisubst '(("&" "&amp;")
+;                                                (" " "%20")
+;                                                ("<" "&lt;")
+;                                                ("#" "")) s)
 
 ;; TODO: should be elsewhere
-(mac zap2 (f x y . args)
-  `(= ,y (,f ,x ,y ,@args)))
+(def symdiff (x y)
+  ;; TODO: inefficient
+  (join (rem (fn (x) (some (fn (y) (is x y)) y)) x)
+        (rem (fn (y) (some (fn (x) (is x y)) x)) y)))
+
+(def duped (xs)
+  ;; TODO: ew
+  (with (h    (table)
+         acc  nil)
+    (each x xs
+      (when h.x
+        (push x acc))
+      (set h.x))
+    (rev acc)))
 
 
 (def dirall-ext (exts)
@@ -40,9 +61,6 @@
                          (some (sym:downcase:extension x) exts))))))
 
 
-(= all-files (dirall-ext '(flac flv mid mkv mp3 mp4 ogg ogm wav webm wma)))
-
-
 ;; other-err
 (def oerr args
   (push (tostring:apply prn args)
@@ -55,6 +73,13 @@
                                       ;; TODO: current-playlist is Nu specific
                (playlist-errors:alref current-playlist 'title))
   nil)
+
+(def perr-multi (x y)
+  (case len.y
+    0 (perr x "\"\"")
+    1 (perr x "\"" car.y "\"")
+    2 (perr x "\"" car.y "\" and \"" cadr.y "\"")
+      (perr x "\"" car.y "\" ... \"" last.y "\"")))
 
 
 ;; TODO: find a way to not need to redef this, using a function argument, maybe?
@@ -75,32 +100,32 @@
                                         (perr "the pattern \"" p "\" matched both:\n      \"" l "\"\n      \"" r "\"")))
                           (o file     (fn (p l r)
                                         (perr "the file \"" p "\" was matched by both:\n      \"" l "\"\n      \"" r "\""))))
-  (withs (track   (obj)
-          files   (obj)
-          matches (boyer-multi-match patterns strings
-                    (fn (x y)
-                      (if files.y
-                            (file y files.y x)
-                          track.x
-                            (pattern x track.x y))
-                      (= files.y x
-                         track.x y))))
+  (withs (track    (obj)
+          files    (obj)
+          patterns (rem (fn (x)
+                          (when acons.x
+                            (if (caris x 'ignore)
+                                ;; debug is Nu specific
+                                (perr "ignoring pattern \"" cadr.x "\"")
+                                (perr "invalid expression: " x))
+                            t))
+                        patterns)
+          matches  (boyer-multi-match patterns strings
+                     (fn (x y)
+                       (if files.y
+                             (file y files.y x)
+                           track.x
+                             (pattern x track.x y))
+                       (= files.y x
+                          track.x y))))
     (each x patterns
       (unless track.x
         (missing x)))
     matches))
 
-
-(def match-all-files (x)
-  (multi-string-filter (rem (fn (x)
-                              (when acons.x
-                                (if (caris x 'ignore)
-                                    ;; debug is Nu specific
-                                    (debug "ignoring pattern \"" cadr.x "\"")
-                                    (perr "invalid expression: " x))
-                                t))
-                            x)
-                       all-files))
+#|
+(def process-asserts (x)
+  (each x current-asserts process-asserts1.x))|#
 
 (def include1 (x)
   (let c car.x
@@ -108,20 +133,26 @@
           nil
         (caris c 'title)
           (include1 cdr.x)
-        (caris c 'include)
-          (join (mappend include cdr.c)
-                (include1 cdr.x))
         (caris c 'w/playlist)
           (join (multi-string-filter cddr.c (include cadr.c))
                 (include1 cdr.x))
         (caris c 'w/folder)
           (let n cadr.c
             ;; TODO: don't call (keep [posmatch ...] ...)
-            (join (multi-string-filter cddr.c (keep [posmatch n _] all-files))
+                                                                ;; TODO: dirname is Nu specific
+            (join (multi-string-filter cddr.c (keep [posmatch n (dirname _)] all-files))
                   (include1 cdr.x)))
         (caris c 'w/all-files)
-          (join (match-all-files cdr.c)
+          (perr "w/all-files")
+          #|(join (multi-string-filter cdr.c all-files)
+                (include1 cdr.x))|#
+        (caris c 'include)
+          (join (mappend include cdr.c)
                 (include1 cdr.x))
+        (caris c 'assert)
+          (do (zap2 join cdr.c asserts.current-playlist)
+              ;(zap2 join cdr.c current-asserts)
+              (include1 cdr.x))
         (do (perr "invalid expression: " c)
             (include1 cdr.x)))))
 
@@ -136,17 +167,46 @@
                                           (let x rev.processed-trace
                                                                 ;; TODO: ugly
                                             (w/current-playlist `((title ,car.x))
+                                              (perr-multi "infinite cycle detected while including playlist " (or cdr.x x))
+                                              #|
                                               ;; TODO: redundant, but maybe necessary...?
                                               (case len.x
                                                 1 (perr "infinite cycle detected while including playlist \"" car.x "\"")
                                                 2 (perr "infinite cycle detected while including playlist \"" cadr.x "\"")
-                                                  (perr "infinite cycle detected while including playlists \"" cadr.x "\" ... \"" last.x "\""))))
+                                                  (perr "infinite cycle detected while including playlists \"" cadr.x "\" ... \"" last.x "\""))|#
+                                              ))
                                           ;; w/processed-trace is Nu specific
                                           (w/processed-trace (cons x processed-trace)
-                                            ;; w/current-playlist is Nu specific
-                                            (w/current-playlist it
-                                              (include1 it))))
+                                          ;; w/current-asserts is Nu specific
+                                          ;(w/current-asserts nil
+                                          ;; w/current-playlist is Nu specific
+                                          (w/current-playlist it
+                                            (let x include1.it
+                                              ;(when current-asserts process-asserts.x)
+                                              x))))
                                       (perr "tried to include playlist \"" x "\" but could not find it")))))
+
+(def process-asserts1 (x)
+  (withs (title  (alref current-playlist 'title)
+          p      processed.title)
+    (if (caris x 'contains)
+          (each x cdr.x
+            (if (is x 'all)
+                (let l nil
+                  (each (key x) processed
+                    (when (isnt key title)
+                      (zap2 join x l)))
+                  (awhen (symdiff l p)
+                    (perr-multi "assert failed: did not contain all files: " (sort < it))))
+                (perr "invalid assert: " x)))
+        (caris x 'no)
+          (each x cdr.x
+            (if (is x 'duplicates)
+                (awhen duped.p
+                  (perr-multi "assert failed: duplicate files detected: " (sort < it)))
+                ;(prn:symdiff p dedup.p)
+                (perr "invalid assert: " x)))
+        (perr "invalid assert: " x))))
 
 
 (def ->sxml (title files)
@@ -158,14 +218,28 @@
        (title ,title)
        (trackList ,@(map (fn (x)
                            `(track
-                              (location ,xml-encode.x)))
+                              (location ,encode-path.x)))
                          files)))))
 
 
 ;(require profile)
-
                     ;; TODO: Nu specific
-(let (input output) script-args
+(let (input output) (w/parse-args script-args
+                      ("-v" "--version" ()
+                        "Displays the version number and exits"
+                        (prn "1.0")
+                        (quit))
+                      ("-d" "--debug" ()
+                        "Prints additional messages"
+                        (= debug? t))
+                      ("-i" "--info" (t)
+                        "Displays information about a template; doesn't write any files"
+                        (= options!info t))
+                      ;((in)  "Folder where you keep your templates")
+                      ;((out) "Folder where the .xspf files are written to")
+                      )
+  (= all-files (dirall-ext '(flac flv mid mkv mp3 mp4 ogg ogm wav webm wma)))
+
   ;; TODO: Nu specific
   (zap todir input)
   (zap todir output)
@@ -186,6 +260,10 @@
   (each (key val) files-by-title
     (include key))
   ;))
+
+  (each (playlist asserts) asserts
+    (w/current-playlist playlist
+      (each x asserts process-asserts1.x)))
 
   (when (or other-errors
             keys.playlist-errors)
@@ -214,12 +292,13 @@
 ;  Total cpu time observed: 6890ms (out of 6920ms)
 ;  Number of samples taken: 135 (once every 51ms)
 
-  (each (key val) processed
-    (let val (->sxml key val)
-      ;; TODO: Nu specific
-      (w/cwd output
-        ;; debug is Nu specific
-        (debug "writing to \"" output key ".xspf\"")
-        (w/outfile out (+ key ".xspf")
-          (disp val out))
-      ))))
+  (aif options!info
+       (prn "files: " (len processed.it))
+       (each (key val) processed
+         (let val (->sxml key val)
+           ;; TODO: Nu specific
+           (w/cwd output
+             ;; debug is Nu specific
+             (debug "writing to \"" output key ".xspf\"")
+             (w/outfile out (+ key ".xspf")
+               (disp val out)))))))

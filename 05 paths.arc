@@ -24,6 +24,9 @@
 (def extension (x)
   (aand (%.filename-extension string.x) %.bytes->string/utf-8.it))
 
+(def no-extension (x)
+  (cut x 0 (-:+ (len extension.x) 1)))
+
 (def expandpath (x)
   (zap string x)
   (if empty.x
@@ -59,7 +62,10 @@
 (= basename (make-path->string:compose %.file-name-from-path expandpath))
 
 (def abspath ((o x))
-  (%.path->string (%.path->complete-path expandpath.x)))
+  (let x expandpath.x
+    (if empty.x
+        cwd
+        (%.path->string %.normalize-path.x)))) ;path->complete-path
 
 (def absdir ((o x))
   (dirname abspath.x))

@@ -47,6 +47,57 @@ Why would you want to use it over Arc 3.1 or Anarki, then?
     `ref` function in _"lib/01 utils.arc"_ and implements implicit parameters
     in _"lib/02 parameters.arc"_
 
+  * Racket's keyword arguments are fully supported:
+
+        > (def foo (:bar (o :qux 5))
+            (list bar qux))
+
+        > (foo :bar 10)
+        (10 5)
+
+        > (foo :qux 20)
+        (nil 20)
+
+        > (foo :qux 2 :bar 1)
+        (1 2)
+
+    Not only are keywords supported, but they're arguably supported better
+    than in Racket:
+
+        > (mac tester (:test)
+            `(do (prn ,test)
+                 (+ 1 2)))
+
+        > (tester)
+        nil
+        3
+
+        > (tester :test "hello!")
+        hello!
+        3
+
+    Yeah, that's right, you can use keyword arguments with macros too. And it
+    works exactly the same as it does with functions: no mucking around with
+    `syntax-case`. But wait, that's not all!
+
+        > (def proxy args
+            (prn args)
+            (apply foo args))
+
+        > (proxy :bar 10)
+        (#:bar 10)
+        (1 2)
+
+        > (apply foo :bar 10 nil)
+        (10 5)
+
+        > (apply foo '(:bar 10))
+        (10 5)
+
+    Functions receive the keyword arguments in their rest arg, and `apply`
+    works with keyword args too. This means you don't need to muck around
+    with `make-keyword-procedure` or `keyword-apply` at all. Much cleaner.
+
   * The REPL is implemented **substantially** better:
 
       * Ctrl+D exits the REPL

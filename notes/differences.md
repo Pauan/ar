@@ -36,17 +36,20 @@ Bug Fixes
 New Features
 ------------
 
+  * The reader expands `:foo` to the Racket keyword `#:foo` rather than the
+    symbol `:foo`
+
   * The following special Racket values are defined:
 
         #%app #%begin #%call #%datum #%if #%lambda #%let* #%set #%set-global #%top
 
   * The following Arc macros are defined:
 
-        % assign fn if square-brackets quasiquote quote
+        % assign curly-brackets fn if square-brackets quasiquote quote
 
   * The following Arc functions are defined:
 
-        %symbol-global close1 pipe ref
+        %symbol-global call-w/stderr close1 pipe ref
 
   * Functions print with `#<fn:...>` and macros print with `#<mac:...>`. In
     addition, macros have names:
