@@ -157,15 +157,15 @@ All other Unicode characters may be used freely.
 
 ---
 
-* [1]: Whitespace is defined as the Unicode code point `U+0020` (space) and end of line[2].
+  * [1]: Whitespace is defined as the Unicode code point `U+0020` (space) and end of line[2].
 
-* [2]: End of line is defined as either `EOF`, `U+000A` (newline), `U+000D` (carriage return), or the combination of `U+000D` and `U+000A`. Parsers must convert all end of lines (excluding `EOF`) within strings to `U+000A`
+  * [2]: End of line is defined as either `EOF`, `U+000A` (newline), `U+000D` (carriage return), or the combination of `U+000D` and `U+000A`. Parsers must convert all end of lines (excluding `EOF`) within strings to `U+000A`
 
-* [3]: A Unicode code point escape starts with `\u(`, contains one or more strings (which must contain only the hexidecimal characters 0123456789abcdefABCDEF) separated by whitespace[1], and ends with `)`.
+  * [3]: A Unicode code point escape starts with `\u(`, contains one or more strings (which must contain only the hexidecimal characters `0123456789abcdefABCDEF`) separated by whitespace[1], and ends with `)`.
 
-Each string is the hexadecimal value of a Unicode code point. As an example, the string `fob` is the same as `"\u(66)\u(6F)\(62)` which is the same as `"\u(66 6F 62)`
+    Each string is the hexadecimal value of a Unicode code point. As an example, the string `fob` is the same as `"\u(66)\u(6F)\(62)` which is the same as `"\u(66 6F 62)`
 
-This is necessary to include illegal characters (listed above). It is also useful in the situation where you don't have an easy way to insert a Unicode character directly, but you do know its code point, e.g. you can represent the string `foo€bar` as `"foo\u(20AC)bar`
+    This is necessary to include illegal characters (listed above). It is also useful in the situation where you don't have an easy way to insert a Unicode character directly, but you do know its code point, e.g. you can represent the string `foo€bar` as `"foo\u(20AC)bar`
 
 
 Comparison
