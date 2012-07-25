@@ -89,6 +89,7 @@ How does it work? There are special characters that can only appear at the start
     In addition, within the string, `\` has the following meaning:
 
       * `\\` inserts a literal `\`
+      * `\<newline>` inserts a literal newline[2]
       * `\u` starts a Unicode code point escape[3]
 
   * The `\` sigil creates a new string which contains the next sigil and continues until the end of the line[2]:
