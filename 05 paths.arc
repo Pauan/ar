@@ -64,8 +64,11 @@
 (def abspath ((o x))
   (let x expandpath.x
     (if empty.x
-        cwd
-        (%.path->string %.normalize-path.x)))) ;path->complete-path
+          cwd
+        ;; TODO: is this necessary? fix it if not
+        file-exists.x
+          (%.path->string %.normalize-path.x)
+        x))) ;path->complete-path
 
 (def absdir ((o x))
   (dirname abspath.x))

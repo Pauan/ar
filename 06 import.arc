@@ -54,6 +54,7 @@
                 (w/import-loading t load.path)))))))
 
 (def import-dir (x)
+  ;; TODO: (import app/playlist/ foo) doesn't work
   (push abspath.x import-dirs))
 
 (def import1 (x)

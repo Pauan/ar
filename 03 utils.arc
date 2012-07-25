@@ -185,3 +185,191 @@
 
 (def num (x (o base 10))
   (coerce x 'num base))
+
+
+(def uniq? (x)
+  (when %.symbol?.x
+    (if %.symbol-interned?.x nil t)))
+
+
+;; Pattern matching
+#|
+(casefn
+  (0) 1
+  (1) 1
+  (x) (foo (- x 1)))
+
+(casefn
+  (0) 1
+  (1) 1
+  (x (list y z)) (foo (- x 1)))
+
+(case-lambda
+  ((g1)
+    (if (is g1 0) 1
+        (is g1 1) 1
+        (err)))
+  ((g1 g2)
+    (if (acons g2)
+        (with (x      g1
+               (y z)  g2)
+          (foo (- x 1)))
+        (err))))
+
+(defcase foo
+  (0)              1
+  (1)              1
+  (x)              (foo (- 1 x))
+  (x (list a b c)) (+ a b c))
+
+
+(case-lambda
+  ((g1)
+    (if (is g1 0) 1
+        (is g1 1) 1
+        (with (x g1)
+          (foo (- 1 x)))))
+  ((g1 g2)
+    (if (acons g2)
+        (with (x       g1
+               (a b c) g2)
+          (+ a b c))
+        (err))))
+
+
+(defcase fact
+  (0) 1
+  (x) (* x (fact (- x 1))))
+
+(case-lambda
+  ((g1)
+    (if (is g1 0) 1
+        (with (x g1)
+          (* x (fact (- 1 x)))))))
+
+
+(define iso
+  X X           -> true
+  [X|XS] [Y|YS] -> (and (iso X Y) (iso XS YS))
+  X Y           -> false)
+
+(defcase iso
+  (x x)               t
+  ([x . xs] [y . ys]) (and (iso x y) (iso xs ys))
+  (x y)               nil)
+|#
+
+(require-rename case-lambda #%case-lambda)
+
+;; TODO: dislike how you pass in a variable and it uses `it`
+(mac casefn-parm-if (x test . body)
+  (w/uniq (l r)
+    `(maplet (,l ,r) ,x
+       (list (maplet it ,l
+               (if ,test
+                   (do ,@body)
+                   it))
+             ,r))))
+
+(def casefn-square-brackets->list (x)
+  (casefn-parm-if x (caris it 'square-brackets)
+                    `(list ,@cdr.it)))
+
+(def casefn-list->cons (x)
+  (casefn-parm-if x (caris it 'list)
+                    (alet x cdr.it
+                      (if no.x
+                          x
+                          `(cons ,car.x ,(self cdr.x))))))
+
+(def casefn-wildcard->uniq (x)
+  (casefn-parm-if x (is it '_)
+                    (uniq)))
+
+(def casefn-multiple->is (x)
+  (let tab (obj)
+    (casefn-parm-if x (do1 tab.it
+                           (= tab.it t))
+                      `(is ,(uniq) ,it))))
+
+(def casefn-literal->is (x)
+  (casefn-parm-if x (no:in type.it 'cons 'sym)
+                    `(is ,(uniq) ,it)))
+
+
+(def make-casefn-if-cons (x u w)
+  (if (caris x 'cons)
+        (list (list 'acons u)
+                     ;; TODO: relies upon the Arc implementation of destructuring;
+                     ;;       should check and see if it would be better to implement
+                     ;;       destructuring in here instead;
+                     ;;       or maybe I should expose the destructuring primitives
+                     ;;       to Arc code instead? It should offer the capacity to
+                     ;;       both extend destructuring and also configure it
+                     ;;       (strict vs loose destructuring, for instance)
+              (list* (alet x x
+                       (if acons.x
+                           (let (_ x y . rest) x
+                             (if rest
+                                 (list* self.x self.y self.rest)
+                                 (cons self.x self.y)))
+                           x))
+                     u w))
+      (caris x 'is)
+        (let (_ v x) x
+          (list `(is ,u ,x) (if uniq?.v
+                                w
+                                (list* v u w))))
+      (err "unknown match" x)))
+
+(def make-casefn-if1 (parms body uniqs)
+  (awith (x  parms
+          u  uniqs
+          w  nil)
+    (if (no x)
+        (list (if w `(with ,w ,body)
+                    body))
+        (let c car.x
+          (if acons.c
+              (let (result w) (make-casefn-if-cons c car.u w)
+                (cons result (self cdr.x cdr.u w)))
+              (self cdr.x cdr.u (list* c car.u w)))))))
+
+(def make-casefn-if (x u)
+  (with (err?  t
+         x     (casefn-literal->is
+               (casefn-multiple->is
+               (casefn-wildcard->uniq
+               (casefn-list->cons
+               (casefn-square-brackets->list x))))))
+    `(if ,@(mappend (fn ((p b))
+                      (let x (make-casefn-if1 p b u)
+                        (when (is len.x 1)
+                          (= err? nil))
+                        x))
+                    x)
+        ,@(when err?
+            (list `(err "could not match input against patterns"))))))
+
+(def make-casefn (x)
+  (let tab (obj)
+    (awhenlet (p b . rest) x
+      (push (list p b) (tab:and acons.p len.p))
+      (self rest))
+    (maplet (k v) tablist.tab
+      (let u (n-of k (uniq))
+        (list u (make-casefn-if rev.v u))))))
+
+(mac casefn body
+  `(%no:#%case-lambda ,@(maplet (k v) make-casefn.body
+                          (%.append-to %.local-env k)
+                          (list k %.ac.v))))
+
+(mac defcase (name . body)
+  `(safeset ,name (casefn ,@body)))
+
+(mac match (x . body)
+  `(apply (casefn ,@body) ,x))
+
+(mac match1 (x . body)
+  `((casefn ,@(mappend (fn ((x y)) (list (list x) y)) pair.body)) ,x))

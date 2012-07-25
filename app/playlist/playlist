@@ -4,20 +4,36 @@
 (import strings sxml boyer-moore parse-script-args) ; parse-script-args
 
 ;; TODO: parameter is Nu specific
-(parameter current-playlist)
+(parameter current-title)
 ;(parameter current-asserts)
 (parameter processed-trace) ;; infinite loop detection
+;(parameter current-information) ;; tracing for information
 
 (= files-by-title   (obj)
    processed        (obj)
-   asserts          (obj)
+   after            (obj)
+   ;asserts          (obj)
    all-files        nil
 
+   ;information      (obj)
+   includes         (obj)
    options          (obj)
 
    playlist-errors  (obj)
    other-errors     nil)
 
+#|
+;; TODO: move to 03 utils.arc
+;; TODO: doesn't work if the values aren't lists:
+;;       (assoc-merge '((a 1) (a 5)))
+(def assoc-merge (x)
+  (let seen (obj)
+    (awhenlet (x . rest) x
+      (if (seen car.x)
+          (do (zap join (cadr:seen car.x) cadr.x)
+              (self rest))
+          (do (= (seen car.x) x)
+              (cons x self.rest))))))|#
 
 ;; TODO: should be in strings.arc
 #|(def xml-encode (s)
@@ -70,8 +86,8 @@
 ;; playlist-err
 (def perr args
   (zap2 string (tostring:apply prn "  -> " args)
-                                      ;; TODO: current-playlist is Nu specific
-               (playlist-errors:alref current-playlist 'title))
+                                      ;; TODO: current-title is Nu specific
+               (playlist-errors current-title))
   nil)
 
 (def perr-multi (x y)
@@ -86,7 +102,7 @@
 (redef boyer-multi-match1 (patterns inputs every)
   (trues (fn (pat)
            (car:keep (fn (in)
-                       (awhen (boyer-moore-search pat in)
+                       (when (boyer-moore-search pat in)
                          (when every
                            (every car.pat in))
                          in))
@@ -127,66 +143,108 @@
 (def process-asserts (x)
   (each x current-asserts process-asserts1.x))|#
 
+(def include-w/folder1 (x)
+  (awhenlet (c . rest) x
+    (if (caris c 'playlist)
+          (let (_ n . x) c
+            ;(prn len.x)
+            ;(= files-by-title.x )
+            ;(zap join processed.n x)
+            ;(prn include.n)
+            (push `(w/playlist ,current-title ,@x) after.n)
+            #|(let title current-title
+              (w/current-title n
+                (include1:list `(w/playlist ,title ,@x))))|#
+            ;(zap join files-by-title.n x)
+            (join x self.rest))
+        (isa c 'string)
+          (cons c self.rest)
+        (do (perr "invalid expression: " c)
+            (self rest)))))
+
+(def include-w/folder ((_ n . x))
+  (let files (multi-string-filter include-w/folder1.x
+                     ;; TODO: don't call (keep [posmatch ...] ...)
+                                 ;; TODO: dirname is Nu specific
+               (keep [posmatch n dirname._] all-files))
+    (zap join files-by-title.current-title files)
+    files))
+
 (def include1 (x)
-  (let c car.x
-    (if (no x)
-          nil
-        (caris c 'title)
-          (include1 cdr.x)
+  (awhenlet (c . rest) x
+    (if (caris c 'title)
+          (self rest)
+        #|(caris c 'playlist)
+          (let (_ n . x) c
+            (w/current-title n
+              (prn:include1 x))
+            (self rest))|#
         (caris c 'w/playlist)
-          (join (multi-string-filter cddr.c (include cadr.c))
-                (include1 cdr.x))
+          (let (_ n . x) c
+            ;(prn n " " x)
+            (push n includes.current-title)
+            #|(when current-information
+              (push (list n files) information!included))|#
+            (join (multi-string-filter x include.n)
+                  (self rest)))
         (caris c 'w/folder)
-          (let n cadr.c
-            ;; TODO: don't call (keep [posmatch ...] ...)
-                                                                ;; TODO: dirname is Nu specific
-            (join (multi-string-filter cddr.c (keep [posmatch n (dirname _)] all-files))
-                  (include1 cdr.x)))
-        (caris c 'w/all-files)
-          (perr "w/all-files")
+            #|(awhen options!info
+              (let title (alref current-playlist 'title)
+                (when (is it title)
+                  (zap2 join files information!files))
+                #|(if current-information
+                    (when (is it title)
+                      (zap2 join files information!files))
+                    (push (list title files) information!others))|#
+                ))|#
+            #|(awhen options!info
+              (let title (alref current-playlist 'title)
+                (if (is title it)
+                    (zap2 join files information!files)
+                    ;(push files information!included.title)
+                    )))|#
+          (join include-w/folder.c self.rest)
+        #|(caris c 'w/all-files)
+          (perr "w/all-files")|#
           #|(join (multi-string-filter cdr.c all-files)
                 (include1 cdr.x))|#
         (caris c 'include)
-          (join (mappend include cdr.c)
-                (include1 cdr.x))
-        (caris c 'assert)
+          (join (mappend (fn (n)
+                           (push n includes.current-title)
+                           (include n))
+                         cdr.c)
+                (self rest))
+        #|(caris c 'assert)
           (do (zap2 join cdr.c asserts.current-playlist)
               ;(zap2 join cdr.c current-asserts)
-              (include1 cdr.x))
+              (include1 cdr.x))|#
         (do (perr "invalid expression: " c)
-            (include1 cdr.x)))))
+            (self rest)))))
 
 (def include (x)
   ;; % is Nu specific
   ;; grr, setting a hash key to nil deletes it,
   ;; so I have to use Racket's hash-ref! instead
-  ((% hash-ref!) processed x (fn () (debug "processing playlist \"" x "\"")
-                                    (iflet it files-by-title.x
-                                          ;; infinite loop detection
-                                      (if (some [is _ x] processed-trace)
-                                          (let x rev.processed-trace
-                                                                ;; TODO: ugly
-                                            (w/current-playlist `((title ,car.x))
-                                              (perr-multi "infinite cycle detected while including playlist " (or cdr.x x))
-                                              #|
-                                              ;; TODO: redundant, but maybe necessary...?
-                                              (case len.x
-                                                1 (perr "infinite cycle detected while including playlist \"" car.x "\"")
-                                                2 (perr "infinite cycle detected while including playlist \"" cadr.x "\"")
-                                                  (perr "infinite cycle detected while including playlists \"" cadr.x "\" ... \"" last.x "\""))|#
-                                              ))
-                                          ;; w/processed-trace is Nu specific
-                                          (w/processed-trace (cons x processed-trace)
-                                          ;; w/current-asserts is Nu specific
-                                          ;(w/current-asserts nil
-                                          ;; w/current-playlist is Nu specific
-                                          (w/current-playlist it
-                                            (let x include1.it
-                                              ;(when current-asserts process-asserts.x)
-                                              x))))
-                                      (perr "tried to include playlist \"" x "\" but could not find it")))))
+  ((% hash-ref!) processed x
+    (fn () (debug "processing playlist \"" x "\"")
+      (iflet it files-by-title.x
+            ;; infinite loop detection
+        (if (some [is _ x] processed-trace)
+            (let x rev.processed-trace
+              (w/current-title car.x
+                (perr-multi "infinite cycle detected while including playlist " (or cdr.x x))))
+            ;; w/processed-trace is Nu specific
+            (w/processed-trace (cons x processed-trace)
+            ;; w/current-title is Nu specific
+            (w/current-title x
+            ;; w/current-information is Nu specific
+                                   ;; TODO: complicated and long and hacky
+            ;(w/current-information (or current-information (and (is x options!info) x)) )
+              (= files-by-title.x nil)
+              (include1 it))))
+        (perr "tried to include playlist \"" x "\" but could not find it")))))
 
-(def process-asserts1 (x)
+#|(def process-asserts1 (x)
   (withs (title  (alref current-playlist 'title)
           p      processed.title)
     (if (caris x 'contains)
@@ -206,7 +264,7 @@
                   (perr-multi "assert failed: duplicate files detected: " (sort < it)))
                 ;(prn:symdiff p dedup.p)
                 (perr "invalid assert: " x)))
-        (perr "invalid assert: " x))))
+        (perr "invalid assert: " x))))|#
 
 
 (def ->sxml (title files)
@@ -261,9 +319,13 @@
     (include key))
   ;))
 
-  (each (playlist asserts) asserts
+  (each (key val) after
+    (w/current-title key
+      (zap join processed.key (include1 rev.val))))
+
+  #|(each (playlist asserts) asserts
     (w/current-playlist playlist
-      (each x asserts process-asserts1.x)))
+      (each x asserts process-asserts1.x)))|#
 
   (when (or other-errors
             keys.playlist-errors)
@@ -293,7 +355,118 @@
 ;  Number of samples taken: 135 (once every 51ms)
 
   (aif options!info
-       (prn "files: " (len processed.it))
+#|
+       Duplicates = (and files (not files))
+       Included   = (and processed (not files))
+       Not        = (not processed)
+       And        = (and processed (not processed))
+|#
+
+       (withs (files      files-by-title.it
+               proc       processed.it
+               ;; TODO: map, etc. should support tables
+               processed  tablist.processed
+               direct     (map (fn ((k v)) (list k files-by-title.k))
+                               processed)
+
+               f          (fn (y) [some (fn (x) (is _ x)) y])
+               match      (fn (filter xs ys)
+                            (zap f xs)
+                            (sort (compare < car)
+                                  (trues (fn ((k v))
+                                           (awhen (filter xs v)
+                                             (list k it)))
+                                         ys)))
+
+               print      (fn (n xs)
+                            (prn n)
+                            (each (k v) xs
+                              (prn "  " k ": " len.v))
+                            (prn))
+
+               includes?  (afn (x y)
+                            (some [or (is _ y)
+                                      (self _ y)]
+                                  includes.x))
+
+               included   (collect:alet x it
+                            (each k (rev includes.x)
+                              (yield:list k (keep [some (fn (x) (is _ x)) proc]
+                                                  files-by-title.k))
+                              (self k))))
+         (prn)
+         ;; files + included files
+         (prn "total files: " (len:apply join files (map cadr included)))
+         (prn "files:       " len.files)
+         (prn)
+         ;; files that are directly in the playlist,
+         ;; and directly in another playlist
+         (print "duplicated:"
+           (rem (fn ((k v)) (is it k))
+                (match keep files direct)))
+         ;; files that are included in the playlist
+         (print "included:" included)
+         ;; files in the playlist or included playlists,
+         ;; that are in other non-included playlists
+         (print "and:"
+           (rem (fn ((k v)) (or (is it k) (includes? it k)))
+                (match keep proc processed)))
+         ;; files not in the playlist or included playlists
+         (print "not:" (match rem proc direct)))
+#|
+       (withs (files  files-by-title.it
+               proc   processed.it
+               seen   (obj)
+               rec    (fn (k v)
+                        (collect
+                          (when (and k (no seen.k))
+                            (= seen.k t)
+                            (yield:list k files-by-title.k))
+                          (alet x v
+                            (each x x
+                              (unless seen.x
+                                (= seen.x t)
+                                (yield:list x files-by-title.x)
+                                (self:rev includes.x)))))))
+         (= seen.it t)
+         (with (included  (rec nil (rev includes.it)) ;information!others
+                others    (mappend (fn ((k v)) (rec k v)) tablist.includes))
+           (zap2 sort (compare < car) others)
+           ;(prn (map car included))
+           ;(prn (map car others))
+           #|(each (key val) processed
+             (unless (is key it)
+               (push (list key val) others)))|#
+           (prn)
+           (prn "total files: " (len:apply join files (map cadr included))) ;len.files
+           #|(prn:+ len.files (reduce (fn (x y)
+                                      (+ (if (isa x 'int)
+                                             x
+                                             (len cadr.x))
+                                         (len cadr.y)))
+                                    included))|#
+           (prn "files:       " len.files) ;(- len.files (sum len:cadr included))
+           (prn)
+           ;; TODO: the various list-processing functions like map, keep, etc.
+           ;;       should handle tables as well
+           (withs (;s       (compare < car)
+                   all     (join included others)
+                           ;(apply join (join (map cadr included) (map cadr others)))
+                           ;(sort s (assoc-merge:join others included))
+                   ;others  (sort s assoc-merge.others)
+
+                   ;; TODO: incorrect length for playlists
+                   f       [some (fn (x) (is _ x)) files]
+                   match   (fn (filter xs)
+                             (trues (fn ((k v))
+                                      (awhen (filter f v)
+                                        (list k it)))
+                                    xs)))
+             (print-playlists "included:" included)
+             (print-playlists "not:" (match rem others))
+             (print-playlists "and:" (match keep all)))))
+|#
+
        (each (key val) processed
          (let val (->sxml key val)
            ;; TODO: Nu specific

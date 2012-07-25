@@ -3,11 +3,32 @@
       %.pregexp.pattern
       pattern))
 
+(mac w/re-matcher (vars match (o after))
+  (w/uniq u
+    (let (p in) vars
+      `(with (,p   (regexp ,p)
+              ,in  (if (isa ,in 'string)
+                       (instring ,in)
+                       ,in)
+              it   %.regexp-try-match)
+         (whenlet ,u ,match
+           (maplet it ,u
+                      ;; TODO: figure out how to get rid of this `if`
+             ,(let x `(if %.bytes?.it
+                          %.bytes->string/utf-8.it
+                          it)
+                (if after
+                    `(let it ,after ,x)
+                    x))))))))
+
 (def re-match (pattern (o in (stdin)))
-  (let result ((if (isa in 'string)
+  (w/re-matcher (pattern in)
+    (it pattern in))
+  #|(let result ((if (isa in 'string)
                    %.regexp-match
                    %.regexp-try-match)
                regexp.pattern in)
+    (prn result)
     (when result
            ;; TODO: figure out how to get rid of this `if`
       (map [if %.bytes?._
@@ -15,7 +36,25 @@
                _]
            result)
       ;result
-      )))
+      ))|#
+)
+
+(def re-match* (pattern (o in (stdin)) (o :group 0))
+  (w/re-matcher (pattern in)
+    (drain (it pattern in) #f)
+    (it group))
+  #|(with (pattern  regexp.pattern
+         func     %.regexp-try-match
+         in       (if (isa in 'string)
+                      (instring in)
+                      in))
+    (let g1 (drain (prn:func pattern in) #f)
+      (maplet x g1
+        (= x (x group))
+        (if %.bytes?.x
+            %.bytes->string/utf-8.x
+            x))))|#
+)
 
 (def re-match1 (pattern (o in (stdin)))
   (cadr:re-match pattern in))

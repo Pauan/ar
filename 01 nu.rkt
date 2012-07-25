@@ -535,7 +535,7 @@
                             (eq? m ac-if)
                             (eq? m ac-quote)
                             (eq? m ac-quasiquote))))
-            (apply (rep m) (cdr e))
+            (mac-call m (cdr e))
             e))
       e))
 
@@ -632,7 +632,9 @@
   (aload (build-path exec-dir "03 repl.arc")))|#
 
 (define (aload filename)
-  (call-with-input-file filename aload1))
+  ;; This is so that it's possible to retrieve the column/line of an input port
+  (parameterize ((port-count-lines-enabled #t))
+    (call-with-input-file filename aload1)))
 
 (define (aload1 p)
   (let/ x (read p)
@@ -846,7 +848,7 @@
         (and c (eq? c (var 'andf)))
           (ac (de-andf f args))
         m
-          (mac-call m args)
+          (ac (mac-call m args))
         ;; inserts the actual value for things in functional position, so
         ;; (+ 1 2) compiles into (#<fn:+> 1 2)
         ;;
@@ -904,8 +906,9 @@
 
 (define (mac-call m args)
   (let/ (kw kwa args) (process-keywords nil nil args)
-    ;; TODO: use (keyword-apply #%call ...) ?
-    (ac (keyword-apply (rep m) kw kwa args))))
+    (parameterize ((local-env (local-env)))
+      ;; TODO: use (keyword-apply #%call ...) ?
+      (keyword-apply (rep m) kw kwa args))))
 
 #|(define #%keyword-call
   (make-keyword-procedure
@@ -1101,9 +1104,9 @@
     (display r port)))
 
 (define (make-read f)
-  (lambda ((in (current-input-port)))
+  (lambda ((in (current-input-port)) (eof nil))
     (let/ x (f in)
-      (if (eof-object? x) nil x))))
+      (if (eof-object? x) eof x))))
 
 (define (make-write f)
   (lambda (c (out (current-output-port)))
@@ -1323,11 +1326,16 @@
 > ((fn (:foo :bar . x) (list foo bar x)) :foo 1 :qux 10 :bar 20)
 (1 20 (:qux 10))
 
+
 > ((fn (:foo (o :bar 5) . x) (list foo bar x)) :foo 1 :qux 10)
 (1 5 (:qux 10))
 
 > ((fn (:foo (o :bar 5) . x) (list foo bar x)) :foo 1 :qux 10 :bar 20)
 (1 20 (:qux 10))
+
+
+> (apply (fn x x) :qux 20 '(:bar 10))
+(:bar 10 :qux 20)
 |#
 
 (define fn-args1
@@ -1683,6 +1691,12 @@
 (sset % args
   (annotate 'mac (lambda args
                    (list (eval `(lambda () ,@args) nu-namespace)))))
+
+(sdef %port-next-location (s f)
+  (call-with-values (lambda () (port-next-location s)) f)
+  #|(let/ (l c p) (port-next-location s)
+    (f l c p))|#
+  )
 
 
 ;=============================================================================
