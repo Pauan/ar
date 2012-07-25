@@ -40,7 +40,7 @@ The syntax is extremely simple. Here's an example:
       11 - Secret of the Forest
       36 - The Brink of Time
 
-The above is intended to describe a playlist of music files. It is equivalent to the following JSON list:
+The above is intended to describe a playlist of music files. It is equivalent to the following JSON:
 
     [["playlist", "5 Stars",
        "05 - Memories of Green",
@@ -66,7 +66,7 @@ How does it work? There are special characters that can only appear at the start
 
   * The `#` sigil creates a comment. Anything that is indented greater than the `#` is completely ignored by the parser.
 
-  * The ``` sigil creates a multi-line string that contains everything that is indented greater than ```:
+  * The `\`` sigil creates a multi-line string that contains everything that is indented greater than `\``:
 
         ` foobar
           quxcorge
@@ -74,7 +74,7 @@ How does it work? There are special characters that can only appear at the start
 
         "foobar\nquxcorge\nnou"
 
-  * The `"` sigil is exactly like ``` except it converts newlines[2] to a single space:
+  * The `"` sigil is exactly like `\`` except it converts newlines[2] to a single space:
 
         " foobar
           quxcorge
@@ -118,7 +118,7 @@ The following Unicode code points are not legal at the start of a string:
     U+205F
     U+3000
 
-If you wish to put them at the start of a string you must use a ``` or `"` sigil.
+If you wish to put them at the start of a string you must use a `\`` or `"` sigil.
 
 When serializing to a string, it is required to convert all of the above code points (excluding `U+0020` and `U+000A`) into a Unicode code point escape[3].
 
