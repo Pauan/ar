@@ -1,7 +1,3 @@
-#|(def io-err (s . rest)
-  (%port-next-location s (fn (l c p)
-    (err:string rest " (at " l ":" (+ c 1) ")"))))|#
-
 (mac in-unicode-range? (x . body)
   (w/uniq u
     `(when ,x
@@ -29,9 +25,7 @@
 
 (def nuit-illegal-at-start? (c)
   (in-unicode-range? c
-    ;(9 A)
     9
-    ;D
     20
     85
     A0
@@ -42,160 +36,6 @@
     202F
     205F
     3000))
-
-
-#|(def nuit-parse-@1 (first second rest)
-  (if empty.first
-      (if empty.second
-          rest
-          (cons second rest))
-      (if empty.second
-          (cons first rest)
-          (list* first second rest))))
-
-(def nuit-parse-@ (s limit)
-  (withs (first   (nuit-string-whitespace s)
-          second  (do (while (is peekc.s #\space)
-                        (readc s))
-                      (nuit-string-newline s))
-          new     nuit-parse-whitespace.s
-          ;rest    (nuit-parse2 s (cons new limits))
-                  ;(nuit-parse1 s nuit-parse-whitespace.s limit)
-                  ;(nuit-parse2 s nuit-parse-whitespace.s)
-
-                    ;(nuit-parse1 s limit)
-                    #|(do (nuit-strip-newline s)
-                      (nuit-parse1 s nuit-parse-whitespace.s))|#
-                  #|(do (prn "@" new " " limit)
-                      nil)|# ;(nuit-parse2 s limit)
-                  ;(nuit-parse2 s new)
-                  )
-    (if (< new limit)
-          (list (nuit-parse-@1 first second nil))
-        (is new limit)
-          (cons (nuit-parse-@1 first second nil)
-                (nuit-parse2 s new new))
-        (list:nuit-parse-@1 first second
-          (nuit-parse2 s new new)))
-    #|(if (< new limit)
-          #|(do (prn new " " limit)
-          (cons
-                ))|#
-          (list:nuit-parse-@1 first second nil)
-          ;(nuit-parse2 s new)
-        (is new limit)
-          (cons (nuit-parse-@1 first second nil)
-                (nuit-parse2 s new limit))
-        (list:nuit-parse-@1 first second
-          (nuit-parse2 s new limit)))|#
-))
-
-(def nuit-parse-# (s limit)
-  (if (is peekc.s #\|)
-      (awith ()
-        (case peekc.s
-          #\# (do (readc s)
-                  (if (is peekc.s #\|)
-                      (self)
-                      ;(nuit-parse-# s limit)
-                      (self)))
-          #\| (do (readc s)
-                  (if (is peek.c #\#)
-                      (do (readc s)
-                          nil)
-                      (self)))
-          nil nil
-              (self)))
-      (while (no:in peekc.s #\newline #\return nil)
-        (readc s))))
-
-
-(def nuit-string-whitespace (s)
-  (collect:while (no:in peekc.s nil #\newline #\return #\space)
-    (yield readc.s)))
-
-
-(def nuit-parse2 (s new limit)
-  (let c peekc.s
-    #|#\newline  (do (readc s)
-                   #|(let new nuit-parse-whitespace.s
-                     (while (and indents (< new car.indents))
-                       (zap cdr indents)))|#
-                   (self 0))
-    #\return   (do (readc s)
-                   (when (is peekc.s #\newline)
-                     (readc s))
-                   #|(let new nuit-parse-whitespace.s
-                     (while (and indents (< new car.indents))
-                       (zap cdr indents)))|#
-                   (self 0))|#
-    ;#\space
-               #|(withs (new  nuit-parse-whitespace.s
-                       c    peekc.s)
-                 ;(prn new " " limit)
-                 #|(if (< new limit)
-                       nil
-                     ;(in c #\@ #\# #\" #\| #\> #\\)
-                     (self new)
-                     ;(io-err s "illegal character at start of line " c)
-                     )|#
-                 )|#
-
-      ;(and (> old-limit 0))
-    (if (nuit-illegal-at-start? c)
-          (io-err s "illegal character at start of line " c)
-        (< new limit)
-          nil
-        (case c
-          #\@        (do (readc s)
-                         (join (nuit-parse-@ s limit)
-                               (nuit-parse1 s limit)))
-          #\#        (do (readc s)
-                         (nuit-parse-# s limit)
-                         (nuit-parse1 s limit))
-          #\"        (do (readc s)
-                         (cons (nuit-parse-quote s limit)
-                               (nuit-parse1 s limit)))
-          #\|        (do (readc s)
-                         (cons (nuit-parse-bar s limit)
-                               (nuit-parse1 s limit)))
-          #\>        (do (readc s)
-                         (cons (nuit-parse-> s limit)
-                               (nuit-parse1 s limit)))
-          #\\        (do (readc s)
-                         (if (in peekc.s #\@ #\# #\" #\| #\> #\\)
-                             (cons (nuit-string-newline s)
-                                   (nuit-parse1 s limit))
-                             (io-err s "invalid escape sequence \\" peekc.s)))
-          nil        nil
-                     (cons (nuit-string-newline s)
-                           (nuit-parse1 s limit))))))
-
-(def nuit-parse1 (s limit)
-  (nuit-parse2 s nuit-parse-whitespace.s limit)
-  ;(prn limit " " peekc.s)
-  #|(let new nuit-parse-whitespace.s
-    ;(prn new " " limit " " peekc.s)
-    #|(while (and limits (<= new car.limits))
-      (prn new " " limits)
-      (zap cdr limits))|#
-    (if (< new limit)
-        (do #|(while (and limits (< new car.limits))
-              (zap cdr limits))|#
-            ;(prn new " " limits)
-            ;(zap cdr limits)
-            nil)
-        (nuit-parse2 s new))
-    ;(zap cdr limits)
-    #|(if (< new car.limits) ;(< new cadr.limits)
-        (do ;(prn new " " limits)
-            ;(zap cdr limits)
-            nil)
-        (do ;(zap cdr limits)
-            (nuit-parse2 s (cons new limits)))
-        )|#
-    )|#
-)|#
 
 
 (= nuit-fail (uniq))
@@ -212,13 +52,6 @@
                     (and x (string x))))
         (self cdr.x (cons car.x acc)))))
 
-#|(mac block-indent (rest new . body)
-  (w/uniq u
-    `(let ,u ,new
-       (collect:while (and ,rest (>= (caar ,rest) ,u))
-         ,@body
-         (zap cdr ,rest)))))|#
-
 (def nuit-first-value (reify)
   (alet x nil
     (or x (self:reify:fn (parse next x)
@@ -229,46 +62,21 @@
 (def block-indent (err reify new (o end) (o f))
   (let oend nil
     (collect:while:reify:fn (parse next x)
-      (when x ;(= x (next))
-        ;(prn x " " new " " oend)
-        (if #|(no cdr.x)
-              (do (yield #\newline)
-                  (yield #\newline)
-                  ;(= oend #\newline)
-                  (next)
-                  ; TODO code duplication
-                  (let x (next)
-                    (when (>= car.x new)
-                      (yield (newstring (- car.x new) #\space))
-                      (if f (yield (f cdr.x))
-                            (yield cdr.x))))
-                  t)|#
-            (>= car.x new)
-              (do ;(prn car.x " " new)
-                  (if oend (do (yield oend)
+      (when x
+        (if (>= car.x new)
+              (do (if oend (do (yield oend)
                                (= oend nil))
                            (yield end))
                   (yield (newstring (- car.x new) #\space))
                   (if f (yield (f err new cdr.x))
                         (yield cdr.x))
-                  #|(when f
-                    (f yield x))|#
-                  ;(next x new)
                   (next)
                   t)
             (no cdr.x)
-              ;(= oend #\newline)
               (do (= oend #\newline)
-                  ;(yield #\newline)
                   (yield #\newline)
                   (next)
-                  t)
-              ;(= x (next))
-              ))))
-  #|(collect:while (fn (x)      (>= car.x new))
-                 (fn (next x) (f yield x)
-                              (next x)))|#
-  )
+                  t))))))
 
 (mac find-indent (s i)
   (w/uniq u
@@ -277,17 +85,6 @@
          (++ ,u)
          (zap cdr ,s))
        ,u)))
-
-#|(def block-string (self i s rest end)
-  (let new (find-indent s i)
-    (iflet body (block-indent rest new
-                  (let x car.rest
-                    (yield end)
-                    (yield (newstring (- car.x new) #\space))
-                    (yield cdr.x)))
-      (cons (string s body)
-            (self rest))
-      (string s))))|#
 
 (def hexadecimal? (c)
   (in c #\0 #\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9
@@ -317,13 +114,8 @@
                             (err (string "missing ending )") (+ i 1))
                           (err (string "illegal Unicode escape " car.rest) (+ i 1))))))
                 (self rest i)))
-          #|(if (hexadecimal? car.rest)
-              nil
-              (err (string "illegal Unicode escape " car.rest) (+ i 1)))|#
       (self rest i)
       (err (string "illegal Unicode escape " car.rest) (+ i 1))))
-
-;"\\(([0-9a-fA-F]+ ?)+\\)"
 
 (def transform-quote (err i s)
   (awith (s  s
@@ -349,22 +141,17 @@
 
 (= parsers (obj #\` (fn (err reify i s)
                       (block-string err reify i s #\newline))
-                #|#\> (fn (err reify i s)
-                      (block-string err reify i s #\space))|#
                 #\" (fn (err reify i s)
                       (block-string err reify i s #\space transform-quote))
                 #\# (fn (err reify i s)
                       (block-indent err reify (find-indent s i))
-                      ;(reify (fn (parse next x) (prn x) (parse:next)))
                       nuit-fail)
                 #\\ (fn (err reify i s)
                       (if (parsers car.s)
                           string.s
-                          ;(nuit-parse-single-string i s rest stack)
                           (err (string "invalid escape sequence \\" car.s) 1)))
                 #\@ (fn (err reify i s)
                       (let (first second) split-whitespace.s
-                        ;(prn "@" first " " second)
                         (withs (new   (car:nuit-first-value reify)
                                 body  (when (> new i)
                                         (collect:while:reify:fn (parse next x)
@@ -375,39 +162,14 @@
                                                   (let x (parse (next) new)
                                                     (if (is x nuit-fail)
                                                         t
-                                                        (yield x)))))))
-                                        #|(drain:reify:fn (parse next x)
-                                          (when (and x (is car.x new))
-                                            (parse (next) new)))|#
-                                        #|(while (fn (x) (is car.x new))
-                                          (fn (next x) (next x)))|#
-                                      )
+                                                        (yield x))))))))
                           (if first
                               (if second
                                   (list* first second body)
                                   (cons first body))
                               (if second
                                   (cons second body)
-                                  body))))
-                        #|(withs (new   caar.rest
-                                body  (collect:while (and rest (> caar.rest i))
-                                        (yield:self rest new)
-                                        (zap cdr rest))
-                                xs    (if first
-                                        (if second
-                                            (list* first second body)
-                                            (cons first body))
-                                        (if second
-                                            (cons second body)
-                                            body)))
-                          ;(prn "@" xs)
-                          ;(cons xs (self rest stack))
-                          (if (or body xs)
-                              (cons xs self.rest)
-                              xs)
-                          )|#
-                    )))
-
+                                  body)))))))
 
 (def nuit-parse-whitespace (line s)
   (let indent 0
@@ -446,17 +208,6 @@
         (nuit-strip-newline s)
         (yield:cons new str)))))
 
-#|(def nuit-parse-single-string (i s rest stack)
-  ;(list string.s)
-  string.s
-  #|(cons
-        (self rest i))|#
-  #|(prn caar.rest " " stack)
-  (if (or no.rest (some [is caar.rest _] stack))
-
-      (err "illegal indentation"))|#
-  )|#
-
 (def formatted-err (message str lines column)
   (err:string message "\n  " str
     "  (line " lines ", column " column ")\n "
@@ -485,13 +236,9 @@
       (when new
         (push new stack))
       (whenlet (i c . s) x
-        ;(prn i " " c " " s)
         (aif (no c)
                (parse (next) new)
-             (no:some [is i _] stack); (isnt i stack)
-               #|(if (is i 0)
-                   nil
-                   )|#
+             (no:some [is i _] stack)
                (f-err "illegal indentation" lines i c s)
              (nuit-illegal-at-start? c)
                (f-err (string "illegal character at start of line " c)
@@ -513,8 +260,6 @@
   (let s (if (isa s 'string)
              (instring s)
              s)
-    ;(nuit-strip-newline s)
-    ;(nuit-parse1 s 0)
     (nuit-parse1 nuit-chunk.s)))
 
 

@@ -72,6 +72,8 @@ How does it work? There are special characters that can only appear at the start
           quxcorge
           nou
 
+    The above is equivalent to this JSON:
+
         "foobar\nquxcorge\nnou"
 
   * The `"` sigil is exactly like \` except it converts newlines[2] to a single space:
@@ -79,6 +81,8 @@ How does it work? There are special characters that can only appear at the start
         " foobar
           quxcorge
           nou
+
+    The above is equivalent to this JSON:
 
         "foobar quxcorge nou"
 
@@ -89,15 +93,24 @@ How does it work? There are special characters that can only appear at the start
 
   * The `\` sigil creates a new string which contains the next sigil and continues until the end of the line[2]:
 
-        \@foobar -> "@foobar"
-        \#foobar -> "#foobar"
-        \`foobar -> "`foobar"
-        \"foobar -> "\"foobar"
-        \\foobar -> "\\foobar"
+        \@foobar    Nuit
+        "@foobar"   JSON
+
+        \#foobar    Nuit
+        "#foobar"   JSON
+
+        \`foobar    Nuit
+        "`foobar"   JSON
+
+        \"foobar    Nuit
+        "\"foobar"  JSON
+
+        \\foobar    Nuit
+        "\\foobar"  JSON
 
 If a line does not start with any of the above sigils it is treated as a string that continues until the end of the line[2].
 
-That's it! The only thing left to describe is some Unicode implementation details.
+That's it! The only thing left to describe is some Unicode stuff.
 
 
 Unicode
@@ -105,9 +118,7 @@ Unicode
 
 The following Unicode code points are not legal at the start of a string:
 
-    U+0009 through U+000A
-    U+000D
-    U+0020
+    U+0009
     U+0085
     U+00A0
     U+1680
@@ -120,13 +131,13 @@ The following Unicode code points are not legal at the start of a string:
 
 If you wish to put them at the start of a string you must use a \` or `"` sigil.
 
-When serializing to a string, it is required to convert all of the above code points (excluding `U+0020` and `U+000A`) into a Unicode code point escape[3].
+When serializing to a string, it is required to convert all of the above code points (regardless of where they appear in the string) into a Unicode code point escape[3].
 
 This is because the above are *whitespace* characters which are usually invisible. Encoding them as Unicode code points makes them visible and removes any ambiguity.
 
 ---
 
-The following Unicode code points are *always* illegal, even within a `"` sigil:
+The following Unicode code points are *always* illegal *everywhere*:
 
     U+0000 through U+0008
     U+000B through U+000C
@@ -137,7 +148,7 @@ The following Unicode code points are *always* illegal, even within a `"` sigil:
     U+D800 through U+DFFF
     U+FFFE through U+FFFF
 
-To represent them, you must use a Unicode code point escape[3] within a `"` sigil.
+To represent them, you must use a Unicode code point escape[3]
 
 ---
 
@@ -147,13 +158,13 @@ All other Unicode characters may be used freely.
 
 * [1]: Whitespace is defined as the Unicode code point `U+0020` (space) and end of line[2].
 
-* [2]: End of line is defined as either EOF, `U+000A` (newline), `U+000D` (carriage return), or the combination of `U+000D` and `U+000A`. Parsers must convert all end of lines (excluding EOF) within strings to `U+000A`
+* [2]: End of line is defined as either `EOF`, `U+000A` (newline), `U+000D` (carriage return), or the combination of `U+000D` and `U+000A`. Parsers must convert all end of lines (excluding `EOF`) within strings to `U+000A`
 
 * [3]: A Unicode code point escape starts with `\u(`, contains one or more strings (which must contain only the hexidecimal characters 0123456789abcdefABCDEF) separated by whitespace[1], and ends with `)`.
 
-Each string is the hexadecimal value of a Unicode code point. As an example, the string `fob` is the same as `"\u(66)\u(6F)\(62)"` which is the same as `"\u(66 6F 62)"`
+Each string is the hexadecimal value of a Unicode code point. As an example, the string `fob` is the same as `"\u(66)\u(6F)\(62)` which is the same as `"\u(66 6F 62)`
 
-This is necessary to include illegal characters (listed above). It is also useful in the situation where you don't have an easy way to insert a Unicode character directly, but you do know its code point, e.g. you can represent the string `foo€bar` as `"foo\u(20AC)bar"`
+This is necessary to include illegal characters (listed above). It is also useful in the situation where you don't have an easy way to insert a Unicode character directly, but you do know its code point, e.g. you can represent the string `foo€bar` as `"foo\u(20AC)bar`
 
 
 Comparison
