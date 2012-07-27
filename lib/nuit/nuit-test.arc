@@ -18,37 +18,27 @@
            (prn))))))
 
 
-(assert (err "invalid escape sequence \\$
+(assert (err "invalid escape $
   \\$foobar  (line 1, column 2)
    ^")
   (nuit-parse "\\$foobar"))
 
-(assert (err "illegal indentation
+(assert (err "invalid indentation
    foobar  (line 1, column 1)
   ^")
   (nuit-parse " foobar"))
 
-(assert (err "illegal character at start of line \t
+(assert (err "invalid character \t
   \tfoobar  (line 1, column 1)
   ^")
   (nuit-parse "\tfoobar"))
 
-(assert (err "illegal whitespace
-           (line 1, column 7)
-        ^")
-  (nuit-parse "       \nfoobar"))
-
-(assert (err "illegal whitespace
-  foobar    (line 2, column 8)
-         ^")
-  (nuit-parse "\nfoobar  \nquxcorge"))
-
-(assert (err "illegal indentation
+(assert (err "invalid indentation
    @foobar  (line 1, column 1)
   ^")
   (nuit-parse " @foobar"))
 
-(assert (err "illegal indentation
+(assert (err "invalid indentation
    yes  (line 4, column 1)
   ^")
   (nuit-parse "
@@ -57,7 +47,7 @@
  yes
 "))
 
-(assert (err "illegal indentation
+(assert (err "invalid indentation
    questionable  (line 4, column 1)
   ^")
   (nuit-parse "
@@ -65,7 +55,7 @@
     yes maybe no
  questionable"))
 
-(assert (err "illegal indentation
+(assert (err "invalid indentation
    quxcorge  (line 3, column 1)
   ^")
   (nuit-parse "
@@ -76,7 +66,7 @@
 yestoo
 "))
 
-(assert (err "illegal escape b
+(assert (err "invalid escape b
   \" foo\\bar  (line 2, column 7)
         ^")
   (nuit-parse "
@@ -86,7 +76,7 @@ yestoo
   maybe sometimes
 "))
 
-(assert (err "illegal Unicode escape A
+(assert (err "missing starting (
   \" foo\\uAB01ar  (line 2, column 8)
          ^")
   (nuit-parse "
@@ -106,7 +96,17 @@ yestoo
   maybe sometimes
 "))
 
-(assert (err "illegal Unicode escape U
+(assert (err "invalid hexadecimal U
+  \" foo\\u(AB01 FA1U  (line 2, column 17)
+                  ^")
+  (nuit-parse "
+\" foo\\u(AB01 FA1U
+  quxcorge
+  nou yes
+  maybe sometimes
+"))
+
+(assert (err "invalid hexadecimal U
   \" foo\\u(AB01 U)ar  (line 2, column 14)
                ^")
   (nuit-parse "
@@ -116,11 +116,91 @@ yestoo
   maybe sometimes
 "))
 
-(assert (err "illegal whitespace
+(assert (err "invalid whitespace
   \" foobar\\    (line 2, column 11)
             ^")
   (nuit-parse "\n\" foobar\\  \n  quxcorge\\\n  nou yes\\\n  maybe sometimes\n"))
 
+(assert (err "invalid character \u0000
+  foo\u0000bar  (line 1, column 4)
+     ^")
+  (nuit-parse "foo\u0000bar"))
+
+(assert (err "invalid character \u0000
+  \u0000foobar  (line 1, column 1)
+  ^")
+  (nuit-parse "\u0000foobar"))
+
+(assert (err "invalid character \uFEFF
+  f\uFEFFoobar  (line 1, column 2)
+   ^")
+  (nuit-parse "f\uFEFFoobar"))
+
+
+
+(assert '("foobar")
+  (nuit-parse "\uFEFFfoobar"))
+
+(assert '(("foo" ("bar" "10")
+            ("qux" "nou"))
+          ("yes"))
+  (nuit-parse "
+@foo @bar 10
+  @qux nou
+@yes"))
+
+(assert '(("foo" ("bar" "10")
+            ("qux" "nou"))
+          ("yes"))
+  (nuit-parse "
+@foo @bar 10
+     @qux nou
+@yes"))
+
+(assert '(("foo" ("bar" "10"
+                   ("qux" "nou")))
+          ("yes"))
+  (nuit-parse "
+@foo @bar 10
+      @qux nou
+@yes"))
+
+(assert '(("foo")
+          ("yes"))
+  (nuit-parse "
+@foo #@bar 10
+      @qux nou
+@yes"))
+
+(assert '(("foo" "")
+          ("yes"))
+  (nuit-parse "
+@foo `
+@yes"))
+
+(assert '(("foo")
+          ("yes"))
+  (nuit-parse "
+@foo
+@yes"))
+
+(assert '(("foo" "bar" "qux" "corge"))
+  (nuit-parse "@foo bar\n  qux\n   \n  corge"))
+
+(assert '(("foo" "bar" "qux" "corge"))
+  (nuit-parse "@foo bar\n  qux\n  \n  corge"))
+
+(assert '(("foo" "bar" "qux" "corge"))
+  (nuit-parse "@foo bar\n  qux\n \n  corge"))
+
+(assert '(("foo" "bar" "qux" "corge"))
+  (nuit-parse "@foo bar\n  qux\n\n  corge"))
+
+(assert '("foobar")
+  (nuit-parse "       \nfoobar"))
+
+(assert '("foobar" "quxcorge")
+  (nuit-parse "\nfoobar  \nquxcorge"))
 
 (assert '("foobar")
   (nuit-parse "foobar"))
@@ -263,6 +343,21 @@ yestoo
   quxcorge
 
   nou yes
+
+
+  maybe sometimes
+"))
+
+(assert '("foobar\n\n\n\nquxcorge\n\nnou yes\n\n\n\nmaybe sometimes")
+  (nuit-parse "
+\" foobar
+
+
+
+  quxcorge
+
+  nou yes
+
 
 
   maybe sometimes

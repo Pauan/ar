@@ -60,7 +60,11 @@ How does it work? There are special characters that can only appear at the start
 
       * Anything between the `@` and the first whitespace character[1] is the first element of the list.
 
-      * Anything between the whitespace character[1] and the end of the line[2] is the second element of the list.
+      * The rest of the line is treated as a new line, which means you may use sigils:
+
+            @foo @bar qux
+
+        The above is equivalent to the JSON array `["foo", ["bar", "qux"]]`
 
       * Every line that's indented further than the `@` is added to the list.
 
@@ -117,39 +121,60 @@ That's it! The only thing left to describe is some Unicode stuff.
 Unicode
 =======
 
-The following Unicode code points are not legal at the start of a string:
+All parsers and serializers are required to support Unicode. This specification deals only with Unicode code points: the encoding used is an implementation detail.
 
+It is *very highly* recommended to support at least UTF-8, but any Unicode encoding is acceptable (UTF-7, UTF-16, UTF-32, Punycode, etc.)
+
+---
+
+The Unicode code point `U+0020` (space) is *completely* ignored at the end of the line[2]. It doesn't even count toward indentation.
+
+---
+
+The following Unicode code points are *always* invalid:
+
+    # whitespace
     U+0009
+    U+000B
+    U+000C
     U+0085
     U+00A0
     U+1680
     U+180E
-    U+2000 through U+200A
-    U+2028 through U+2029
+    U+2000 - U+200A
+    U+2028
+    U+2029
     U+202F
     U+205F
     U+3000
 
-If you wish to put them at the start of a string you must use a \` or `"` sigil.
+    # non-printing
+    U+0000 - U+0008
+    U+000E - U+001F
+    U+007F
+    U+0080 - U+0084
+    U+0086 - U+009F
+    U+FDD0 - U+FDEF
+    U+FFFE
+    U+FFFF
+    U+1FFFE
+    U+1FFFF
+    U+10FFFE
+    U+10FFFF
 
-When serializing to a string, it is required to convert all of the above code points (regardless of where they appear in the string) into a Unicode code point escape[3].
-
-This is because the above are *whitespace* characters which are usually invisible. Encoding them as Unicode code points makes them visible and removes any ambiguity.
+To represent them, you must use a Unicode code point escape[3]
 
 ---
 
-The following Unicode code points are *always* illegal *everywhere*:
+The Unicode byte order mark `U+FEFF` is invalid everywhere except as the first character in the file. It is used for encoding and is an implementation detail. Thus, it has no effect on indentation, etc.
 
-    U+0000 through U+0008
-    U+000B through U+000C
-    U+000E through U+001F
-    U+007F
-    U+0080 through U+0084
-    U+0086 through U+009F
-    U+D800 through U+DFFF
-    U+FFFE through U+FFFF
+---
 
-To represent them, you must use a Unicode code point escape[3]
+The following Unicode code points are *only* valid when using UTF-16 encoding:
+
+    U+D800 - U+DFFF
+
+They are always invalid within Unicode code point escapes[3] (even in UTF-16 encoding)
 
 ---
 
@@ -161,11 +186,11 @@ All other Unicode characters may be used freely.
 
   * [2]: End of line is defined as either `EOF`, `U+000A` (newline), `U+000D` (carriage return), or the combination of `U+000D` and `U+000A`. Parsers must convert all end of lines (excluding `EOF`) within strings to `U+000A`
 
-  * [3]: A Unicode code point escape starts with `\u(`, contains one or more strings (which must contain only the hexidecimal characters `0123456789abcdefABCDEF`) separated by whitespace[1], and ends with `)`.
+  * [3]: A Unicode code point escape starts with `\u(`, contains one or more strings (which must contain only the hexidecimal characters `0123456789abcdefABCDEF`) separated by `U+0020` (space), and ends with `)`.
 
     Each string is the hexadecimal value of a Unicode code point. As an example, the string `fob` is the same as `"\u(66)\u(6F)\(62)` which is the same as `"\u(66 6F 62)`
 
-    This is necessary to include illegal characters (listed above). It is also useful in the situation where you don't have an easy way to insert a Unicode character directly, but you do know its code point, e.g. you can represent the string `foo€bar` as `"foo\u(20AC)bar`
+    This is necessary to include invalid characters (listed above). It is also useful in the situation where you don't have an easy way to insert a Unicode character directly, but you do know its code point, e.g. you can represent the string `foo€bar` as `"foo\u(20AC)bar`
 
 
 Comparison

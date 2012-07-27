@@ -57,7 +57,10 @@
 )
 
 (def re-match1 (pattern (o in (stdin)))
-  (cadr:re-match pattern in))
+  (car:re-match pattern in))
+
+#|(def re-match1 (pattern (o in (stdin)))
+  ((re-match pattern in) 1))|#
 
 ; This isn't anchored at the beginning of the input unless you use
 ; "^" yourself.
