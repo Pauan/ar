@@ -220,7 +220,7 @@ Is the same as this JSON:
         "36 - The Brink of Time"]
     ]
 
-That's it! The only thing left to describe is some Unicode details.
+That's it! The only thing left to describe is some Unicode stuff.
 
 
 Unicode
@@ -229,6 +229,8 @@ Unicode
 All parsers and serializers are required to support Unicode. This specification deals only with Unicode code points: the encoding used is an implementation detail.
 
 It is *very highly* recommended to support at least UTF-8, but any Unicode encoding is acceptable (UTF-7, UTF-16, UTF-32, Punycode, etc.)
+
+It is also *very highly* recommended to use UTF-8 as the default encoding when serializing.
 
 ---
 
@@ -267,11 +269,11 @@ To represent them, you must use a Unicode code point escape[3]
 
 ---
 
-The Unicode byte order mark `U+FEFF` is invalid everywhere except as the first character in the stream. It is used for encoding and is an implementation detail. Thus, it has no effect on indentation, is not included in the string, etc.
+The Unicode byte order mark `U+FEFF` is invalid everywhere except as the first character in the stream. It is used for encoding and is an implementation detail. Thus, it has no effect on indentation, is not included in strings, etc.
 
 ---
 
-The following Unicode code points are *only* valid when using UTF-16 encoding:
+The following Unicode code points are **only** valid when using UTF-16 encoding:
 
     U+D800 - U+DFFF
 
@@ -283,15 +285,15 @@ All other Unicode characters may be used freely.
 
 ---
 
-  * [1]: Whitespace is defined as the Unicode code point `U+0020` (space).
+[1]: Whitespace is defined as the Unicode code point `U+0020` (space)
 
-  * [2]: End of line is defined as either `EOF`, `U+000A` (newline), `U+000D` (carriage return), or the combination of `U+000D` and `U+000A`. Parsers must convert all end of lines (but not `EOF`) within strings to `U+000A`
+[2]: End of line is defined as either `EOF`, `U+000A` (newline), `U+000D` (carriage return), or the combination of `U+000D` and `U+000A`. Parsers must convert all end of lines (excluding `EOF`) within strings to `U+000A`
 
-  * [3]: A Unicode code point escape starts with `\u(`, contains one or more strings (which must contain only the hexidecimal characters `0123456789abcdefABCDEF`) separated by whitespace[1], and ends with `)`
+[3]: A Unicode code point escape starts with `\u(`, contains one or more strings (which must contain only the hexidecimal characters `0123456789abcdefABCDEF`) separated by whitespace[1], and ends with `)`
 
-    Each string is the hexadecimal value of a Unicode code point. As an example, the string `"fob` is the same as `"\u(66)\u(6F)\(62)` which is the same as `"\u(66 6F 62)`. Because they are *code points* and not bytes, `\u(1D11E)` represents the Unicode character `𝄞`
+Each string is the hexadecimal value of a Unicode code point. As an example, the string `"fob` is the same as `"\u(66)\u(6F)\(62)` which is the same as `"\u(66 6F 62)`. Because they are *code points* and not bytes, `\u(1D11E)` represents the Unicode character `𝄞`
 
-    Unicode code point escapes are necessary to include invalid characters (listed above). They are also useful in the situation where you don't have an easy way to insert a Unicode character directly, but you do know its code point, e.g. you can represent the string `foo€bar` as `"foo\u(20AC)bar`
+Unicode code point escapes are necessary to include invalid characters (listed above). They are also useful in the situation where you don't have an easy way to insert a Unicode character directly, but you do know its code point, e.g. you can represent the string `foo€bar` as `"foo\u(20AC)bar`
 
 
 Comparison
