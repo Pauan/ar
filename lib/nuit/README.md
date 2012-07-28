@@ -28,12 +28,12 @@ There are special characters that can only appear at the start of a line. They a
 
   * The `@` sigil creates a list:
 
-     1. If there's any non-whitespace[1] immediately after the `@` it is added to the list as a string:
+    1. If there's any non-whitespace[1] immediately after the `@` it is added to the list as a string:
 
             Nuit  @foo
             JSON  ["foo"]
 
-     2. After the first string (if any), if there's any whitespace[1] followed by non-whitespace[1], it is treated as a new line and added to the list:
+    2. After the first string (if any), if there's any whitespace[1] followed by non-whitespace[1], it is treated as a new line and added to the list:
 
             Nuit  @foo bar
             JSON  ["foo", "bar"]
@@ -44,19 +44,19 @@ There are special characters that can only appear at the start of a line. They a
             Nuit  @foo @bar qux
             JSON  ["foo", ["bar", "qux"]]
 
-     3. The line starting with `@` is the "first line". Look at the second line and see if it has a greater indent than the first line. If not, then it is not added to the list:
+    3. The line starting with `@` is the "first line". Look at the second line and see if it has a greater indent than the first line. If not, then it is not added to the list:
 
             Nuit  @foo bar qux
                   yes
             JSON  ["foo", "bar qux"]
 
-     4. If the second line *does* have a greater indent than the first line then it is added to the list:
+    4. If the second line *does* have a greater indent than the first line then it is added to the list:
 
             Nuit  @foo bar qux
                     yes
             JSON  ["foo", "bar qux", "yes"]
 
-     5. Every line after the second line that has the *same indent* as the second line is added to the list:
+    5. Every line after the second line that has the *same indent* as the second line is added to the list:
 
             Nuit  @foo bar qux
                     yes
@@ -65,7 +65,7 @@ There are special characters that can only appear at the start of a line. They a
                       not included
             JSON  ["foo", "bar qux", "yes", ["maybe"], "someday"]
 
-     6. The above rules are recursive, which allows lists to nest within lists:
+    6. The above rules are recursive, which allows lists to nest within lists:
 
             Nuit  @foo @bar qux
                          corge nou
@@ -77,16 +77,16 @@ There are special characters that can only appear at the start of a line. They a
 
   * The `#` and \` and `"` sigils use the following indent rules:
 
-      1. Find the number of characters between the start of the line (including indentation) and the first non-whitespace[1] character after the sigil. Let's call that number `index`.
+     1. Find the number of characters between the start of the line (including indentation) and the first non-whitespace[1] character after the sigil. Let's call that number `index`.
 
-      2. If there aren't any non-whitespace[1] characters after the sigil, then `index` is the indentation + the sigil + `1`.
+     2. If there aren't any non-whitespace[1] characters after the sigil, then `index` is the indentation + the sigil + `1`
 
-      3. Everything between `index` and the end of the line[2] is included in the sigil:
+     3. Everything between `index` and the end of the line[2] is included in the sigil:
 
              Nuit  ` foobar
              JSON  "foobar"
 
-      4. Every following line that has an indent that is greater than or equal to `index` is included in the sigil:
+     4. Every following line that has an indent that is greater than or equal to `index` is included in the sigil:
 
              Nuit  `    foobar
                          quxcorge
@@ -94,7 +94,7 @@ There are special characters that can only appear at the start of a line. They a
                       not included
              JSON  "foobar\n quxcorge\nnou"
 
-      5. Empty lines are also included, regardless of their indentation:
+     5. Empty lines are also included, regardless of their indentation:
 
              Nuit  ` foobar
                       quxcorge
@@ -259,7 +259,7 @@ The following Unicode code points are *only* valid when using UTF-16 encoding:
 
     U+D800 - U+DFFF
 
-They are always invalid within Unicode code point escapes[3] (even in UTF-16 encoding)
+They are **always** invalid within Unicode code point escapes[3] even in UTF-16 encoding
 
 ---
 
@@ -271,7 +271,7 @@ All other Unicode characters may be used freely.
 
   * [2]: End of line is defined as either `EOF`, `U+000A` (newline), `U+000D` (carriage return), or the combination of `U+000D` and `U+000A`. Parsers must convert all end of lines (but not `EOF`) within strings to `U+000A`
 
-  * [3]: A Unicode code point escape starts with `\u(`, contains one or more strings (which must contain only the hexidecimal characters `0123456789abcdefABCDEF`) separated by whitespace[1], and ends with `)`.
+  * [3]: A Unicode code point escape starts with `\u(`, contains one or more strings (which must contain only the hexidecimal characters `0123456789abcdefABCDEF`) separated by whitespace[1], and ends with `)`
 
     Each string is the hexadecimal value of a Unicode code point. As an example, the string `"fob` is the same as `"\u(66)\u(6F)\(62)` which is the same as `"\u(66 6F 62)`. Because they are *code points* and not bytes, `\u(1D11E)` represents the Unicode character `𝄞`
 
