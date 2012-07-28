@@ -131,7 +131,23 @@ yestoo
    ^")
   (nuit-parse "f\uFEFFoobar"))
 
+(assert (err "integer->char: expects argument of type <exact integer in [0,#x10FFFF], not in [#xD800,#xDFFF]>; given 55296")
+  (nuit-parse "
+\" foo\\u(D800)bar"))
 
+(assert (err "integer->char: expects argument of type <exact integer in [0,#x10FFFF], not in [#xD800,#xDFFF]>; given 57343")
+  (nuit-parse "
+\" foo\\u(DFFF)bar"))
+
+
+
+(assert '("foo힙bar")
+  (nuit-parse "
+\" foo\\u(D799)bar"))
+
+(assert '("foo\uE000bar")
+  (nuit-parse "
+\" foo\\u(E000)bar"))
 
 (assert '("foobar")
   (nuit-parse "\uFEFFfoobar"))

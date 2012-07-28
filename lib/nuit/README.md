@@ -24,7 +24,155 @@ Nuit has only lists and strings. Lists can be nested within lists which allows f
 Syntax
 ======
 
-The syntax is extremely simple. Here's an example:
+There are special characters that can only appear at the start of a line. They are called sigils:
+
+  * The `@` sigil creates a list:
+
+     1. If there's any non-whitespace[1] immediately after the `@` it is added to the list as a string:
+
+            Nuit  @foo
+            JSON  ["foo"]
+
+     2. After the first string (if any), if there's any whitespace[1] followed by non-whitespace[1], it is treated as a new line and added to the list:
+
+            Nuit  @foo bar
+            JSON  ["foo", "bar"]
+
+            Nuit  @ foo bar
+            JSON  ["foo bar"]
+
+            Nuit  @foo @bar qux
+            JSON  ["foo", ["bar", "qux"]]
+
+     3. The line starting with `@` is the "first line". Look at the second line and see if it has a greater indent than the first line. If not, then it is not added to the list:
+
+            Nuit  @foo bar qux
+                  yes
+            JSON  ["foo", "bar qux"]
+
+     4. If the second line *does* have a greater indent than the first line then it is added to the list:
+
+            Nuit  @foo bar qux
+                    yes
+            JSON  ["foo", "bar qux", "yes"]
+
+     5. Every line after the second line that has the *same indent* as the second line is added to the list:
+
+            Nuit  @foo bar qux
+                    yes
+                    @maybe
+                    someday
+                      not included
+            JSON  ["foo", "bar qux", "yes", ["maybe"], "someday"]
+
+     6. The above rules are recursive, which allows lists to nest within lists:
+
+            Nuit  @foo @bar qux
+                         corge nou
+                    yes
+                    @maybe
+                      @
+                      someday
+            JSON  ["foo", ["bar", "qux", "corge nou"] "yes" ["maybe", [], "someday"]]
+
+  * The `#` and \` and `"` sigils use the following indent rules:
+
+      1. Find the number of characters between the start of the line (including indentation) and the first non-whitespace[1] character after the sigil. Let's call that number `index`.
+
+      2. If there aren't any non-whitespace[1] characters after the sigil, then `index` is the indentation + the sigil + `1`.
+
+      3. Everything between `index` and the end of the line[2] is included in the sigil:
+
+             Nuit  ` foobar
+             JSON  "foobar"
+
+      4. Every following line that has an indent that is greater than or equal to `index` is included in the sigil:
+
+             Nuit  `    foobar
+                         quxcorge
+                        nou
+                      not included
+             JSON  "foobar\n quxcorge\nnou"
+
+      5. Empty lines are also included, regardless of their indentation:
+
+             Nuit  ` foobar
+                      quxcorge
+
+                     nou
+
+                     yes
+             JSON  "foobar\n quxcorge\n\nnou\n\nyes"
+
+    In addition, the following rules apply to the individual sigils:
+
+      * `#` completely ignores everything that is included by the above indent rules.
+
+      * \` creates a string which contains everything that is included by the above indent rules.
+
+      * `"` is exactly like \` except:
+
+          * 1 empty line is converted to a space[1]:
+
+                Nuit  " foobar
+                        quxcorge
+                        nou
+                JSON  "foobar quxcorge nou"
+
+          * 2+ empty lines are left unchanged:
+
+                Nuit  " foobar
+
+                        quxcorge
+
+                        nou
+                JSON  "foobar\n\nquxcorge\n\nnou"
+
+          * Within the string, `\` has the following meaning:
+
+              * `\` at the end of the line[2] inserts a literal newline, except at the end of the string, in which case it does nothing:
+
+                    Nuit  " foobar\
+                            quxcorge\
+                            nou\
+                    JSON  "foobar\nquxcorge\nnou"
+
+              * `\\` inserts a literal `\`:
+
+                    Nuit  " foo\\bar
+                    JSON  "foo\\bar"
+
+              * `\u` starts a Unicode code point escape[3]:
+
+                    Nuit  " foo\u(20 20AC)bar
+                    JSON  "foo\u20\20ACbar"
+
+  * The `\` sigil creates a string which contains the next sigil and continues until the end of the line[2]:
+
+        Nuit  \@foobar
+        JSON  "@foobar"
+
+        Nuit  \#foobar
+        JSON  "#foobar"
+
+        Nuit  \`foobar
+        JSON  "`foobar"
+
+        Nuit  \"foobar
+        JSON  "\"foobar"
+
+        Nuit  \\foobar
+        JSON  "\\foobar"
+
+If a line does not start with any of the above sigils it is treated as a string that continues until the end of the line[2].
+
+Whitespace[1] is *completely* ignored at the end of the line[2], even within strings.
+
+Except within strings, empty lines are *completely* ignored. They don't even count for indentation.
+
+It is invalid for a non-empty line to be indented if it is not within a list, comment, or string.
+
+There is an implicit list that contains the entire Nuit text. Which means this:
 
     @playlist 5 Stars
       05 - Memories of Green
@@ -40,82 +188,23 @@ The syntax is extremely simple. Here's an example:
       11 - Secret of the Forest
       36 - The Brink of Time
 
-The above is intended to describe a playlist of music files. It is equivalent to the following JSON:
+Is the same as this JSON:
 
-    [["playlist", "5 Stars",
-       "05 - Memories of Green",
-       "51 - Time Circuits",
-       "55 - Undersea Palace"],
-     ["playlist", "4 Stars",
-       "47 - Battle with Magus",
-       "53 - Sara's (Schala's) Theme",
-       "64 - To Far Away Times"]
-     ["playlist", "3 Stars",
-       "11 - Secret of the Forest",
-       "36 - The Brink of Time"]]
+    [
+      ["playlist", "5 Stars",
+        "05 - Memories of Green",
+        "51 - Time Circuits",
+        "55 - Undersea Palace"],
+      ["playlist", "4 Stars",
+        "47 - Battle with Magus",
+        "53 - Sara's (Schala's) Theme",
+        "64 - To Far Away Times"],
+      ["playlist", "3 Stars",
+        "11 - Secret of the Forest",
+        "36 - The Brink of Time"]
+    ]
 
-How does it work? There are special characters that can only appear at the start of a line. They are called sigils:
-
-  * The `@` sigil creates a list:
-
-      * Anything between the `@` and the first whitespace character[1] is the first element of the list.
-
-      * The rest of the line is treated as a new line, which means you may use sigils:
-
-            @foo @bar qux
-
-        The above is equivalent to the JSON array `["foo", ["bar", "qux"]]`
-
-      * Every line that's indented further than the `@` is added to the list.
-
-  * The `#` sigil creates a comment. Anything that is indented greater than the `#` is completely ignored by the parser.
-
-  * The \` sigil creates a multi-line string that contains everything that is indented greater than \`:
-
-        ` foobar
-          quxcorge
-          nou
-
-    The above is equivalent to this JSON:
-
-        "foobar\nquxcorge\nnou"
-
-  * The `"` sigil is exactly like \` except it converts newlines[2] to a single space:
-
-        " foobar
-          quxcorge
-          nou
-
-    The above is equivalent to this JSON:
-
-        "foobar quxcorge nou"
-
-    In addition, within the string, `\` has the following meaning:
-
-      * `\\` inserts a literal `\`
-      * `\<newline>` inserts a literal newline[2]
-      * `\u` starts a Unicode code point escape[3]
-
-  * The `\` sigil creates a new string which contains the next sigil and continues until the end of the line[2]:
-
-        \@foobar    Nuit
-        "@foobar"   JSON
-
-        \#foobar    Nuit
-        "#foobar"   JSON
-
-        \`foobar    Nuit
-        "`foobar"   JSON
-
-        \"foobar    Nuit
-        "\"foobar"  JSON
-
-        \\foobar    Nuit
-        "\\foobar"  JSON
-
-If a line does not start with any of the above sigils it is treated as a string that continues until the end of the line[2].
-
-That's it! The only thing left to describe is some Unicode stuff.
+That's it! The only thing left to describe is some Unicode details.
 
 
 Unicode
@@ -124,10 +213,6 @@ Unicode
 All parsers and serializers are required to support Unicode. This specification deals only with Unicode code points: the encoding used is an implementation detail.
 
 It is *very highly* recommended to support at least UTF-8, but any Unicode encoding is acceptable (UTF-7, UTF-16, UTF-32, Punycode, etc.)
-
----
-
-The Unicode code point `U+0020` (space) is *completely* ignored at the end of the line[2]. It doesn't even count toward indentation.
 
 ---
 
@@ -166,7 +251,7 @@ To represent them, you must use a Unicode code point escape[3]
 
 ---
 
-The Unicode byte order mark `U+FEFF` is invalid everywhere except as the first character in the file. It is used for encoding and is an implementation detail. Thus, it has no effect on indentation, etc.
+The Unicode byte order mark `U+FEFF` is invalid everywhere except as the first character in the stream. It is used for encoding and is an implementation detail. Thus, it has no effect on indentation, is not included in the string, etc.
 
 ---
 
@@ -182,15 +267,15 @@ All other Unicode characters may be used freely.
 
 ---
 
-  * [1]: Whitespace is defined as the Unicode code point `U+0020` (space) and end of line[2].
+  * [1]: Whitespace is defined as the Unicode code point `U+0020` (space).
 
-  * [2]: End of line is defined as either `EOF`, `U+000A` (newline), `U+000D` (carriage return), or the combination of `U+000D` and `U+000A`. Parsers must convert all end of lines (excluding `EOF`) within strings to `U+000A`
+  * [2]: End of line is defined as either `EOF`, `U+000A` (newline), `U+000D` (carriage return), or the combination of `U+000D` and `U+000A`. Parsers must convert all end of lines (but not `EOF`) within strings to `U+000A`
 
-  * [3]: A Unicode code point escape starts with `\u(`, contains one or more strings (which must contain only the hexidecimal characters `0123456789abcdefABCDEF`) separated by `U+0020` (space), and ends with `)`.
+  * [3]: A Unicode code point escape starts with `\u(`, contains one or more strings (which must contain only the hexidecimal characters `0123456789abcdefABCDEF`) separated by whitespace[1], and ends with `)`.
 
-    Each string is the hexadecimal value of a Unicode code point. As an example, the string `fob` is the same as `"\u(66)\u(6F)\(62)` which is the same as `"\u(66 6F 62)`
+    Each string is the hexadecimal value of a Unicode code point. As an example, the string `"fob` is the same as `"\u(66)\u(6F)\(62)` which is the same as `"\u(66 6F 62)`. Because they are *code points* and not bytes, `\u(1D11E)` represents the Unicode character `𝄞`
 
-    This is necessary to include invalid characters (listed above). It is also useful in the situation where you don't have an easy way to insert a Unicode character directly, but you do know its code point, e.g. you can represent the string `foo€bar` as `"foo\u(20AC)bar`
+    Unicode code point escapes are necessary to include invalid characters (listed above). They are also useful in the situation where you don't have an easy way to insert a Unicode character directly, but you do know its code point, e.g. you can represent the string `foo€bar` as `"foo\u(20AC)bar`
 
 
 Comparison

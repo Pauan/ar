@@ -89,10 +89,6 @@
        (let x (it (fn (s2 lines2)
                     (= s s2 lines lines2)
                     nil)
-                  #|(nuit-while s lines
-                    (nuit-parse-index is index)
-                    (fn (s2 lines2 x)
-                       x))|#
                   s lines (+ i 1) (cut str 1))
          (f s lines x))
        (f cdr.s (+ lines 1) (list str))))
@@ -112,7 +108,7 @@
                 (let (n? str) (if f (f sep s lines i str)
                                     (list sep str))
                   (do1 (list* s?
-                              (newstring (max 0 (- i index)) #\space)
+                              (newstring (- i index) #\space)
                               str
                               (self cdr.s (+ lines 1)))
                        (= s? n?)))))
@@ -157,50 +153,6 @@
                          (f-err (string "invalid escape " end)
                                 car.s lines i))))))
     (list sep string.x)))
-
-#|
-(def range2 (next l h)
-  ...)
-
-(def range1 (next l h)
-  (if (< l h)
-      (cons l (next (+ l 1) h))
-      nil))
-
-(def range (l h)
-  (awith (l  l
-          h  h)
-    (range1 self l h)))
-
-(def range (l h)
-  ((afn (l h)
-     (range1 self l h))
-   l h))
-
-(def range (l h)
-  (let self nil
-    (= self (fn (l h)
-              (range1 self l h)))
-    (self l h)))
-
-(def range (l h)
-  (let next (fn (next l h)
-              (range1 (fn (l h)
-                        (next next l h))
-                      l h))
-    (next next l h)))
-
-
-(def range (l h)
-  (if (< l h)
-      (cons l (range (+ l 1) h))
-      nil))
-
-(def range (cont l h)
-  (if (< l h)
-      (cont (cons l (range cont (+ l 1) h)))
-      (cont nil)))
-|#
 
 (= nuit-parsers
    (obj #\@ (fn (next s lines i str)
@@ -247,33 +199,6 @@
                                   (instring s)
                                   s))
               1
-    #|(fn (self s lines i str)
-      (if (is i 0)
-          (aif (nuit-parsers str.0)
-               (it self s lines)
-               (cons str (self cdr.s (+ lines 1))))
-          (f-err "invalid indentation" car.s lines i)))|#
     (nuit-parse-index is 0
       (fn (self s lines i str)
-        ;(len:re-match1 "^ *" car.s)
         (f-err "invalid indentation" car.s lines i)))))
-
-
-#|
-(many (or (seq #\@ (many (not )) )))
-
-
-@ followed by 0 or more characters (convert to string), followed by 0 or more spaces, followed by an optional <parse rest of line at index>, followed by 0 or more <parse lines at indent of second line>
-
-# ` or " followed by 0 or more characters (converted to string), followed by 0 or more lines that are greater than or equal to the whitespace between the sigil and the first non-whitespace
-
-\\ followed by 1 sigil followed by 0 or more <not invalid>
-
-
-#
-`
-"
-
-"\n\n" -> "\n\n"
-"\n"   -> " "
-|#
