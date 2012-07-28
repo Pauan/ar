@@ -418,3 +418,61 @@ mooooooooooo
 
 (assert '("foobar\nquxcorge\nnou yes\nmaybe sometimes")
   (nuit-parse "\n\" foobar\\  \n  quxcorge\\\n  nou yes\\\n  maybe sometimes\n"))
+
+(assert '("" "foobar" "quxcorge" "nou yes" "maybe sometimes")
+  (nuit-parse "
+`
+foobar
+quxcorge
+nou yes
+maybe sometimes
+"))
+
+(assert '("foobar\n  quxcorge\nnou yes\nmaybe sometimes")
+  (nuit-parse "
+`
+ foobar
+   quxcorge
+ nou yes
+ maybe sometimes
+"))
+
+(assert '(("foo" "foobar\nquxcorge\nnou yes\nmaybe sometimes"))
+  (nuit-parse "
+@foo
+    `
+     foobar
+     quxcorge
+     nou yes
+     maybe sometimes
+"))
+
+(assert '(("foo" "" "foobar" "quxcorge" "nou yes" "maybe sometimes"))
+  (nuit-parse "
+@foo
+    `
+    foobar
+    quxcorge
+    nou yes
+    maybe sometimes
+"))
+
+(assert '(("foo" "foobar   quxcorge nou yes maybe sometimes"))
+  (nuit-parse "
+@foo
+    \"
+     foobar
+       quxcorge
+     nou yes
+     maybe sometimes
+"))
+
+(assert '(("foo" "" "foobar" "quxcorge" "nou yes" "maybe sometimes"))
+  (nuit-parse "
+@foo
+    \"
+    foobar
+    quxcorge
+    nou yes
+    maybe sometimes
+"))

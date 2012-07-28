@@ -97,8 +97,9 @@
   (fn (next s lines index str)
     (withs ((i  str)  nuit-indent.str
             index     (+ index len.i)
-            (s? str)  (if f (f sep s lines index str)
-                            (list sep str)))
+            (s? str)  (if (is str "")  (list nil str)
+                          f            (f sep s lines index str)
+                                       (list sep str)))
       (nuit-while1 cdr.s (+ lines 1)
         (fn (self s lines i str)
           (if (is str "")
@@ -107,11 +108,10 @@
               (>= i index)
                 (let (n? str) (if f (f sep s lines i str)
                                     (list sep str))
-                  (do1 (list* s?
-                              (newstring (- i index) #\space)
-                              str
-                              (self cdr.s (+ lines 1)))
-                       (= s? n?)))))
+                  (list* (do1 s? (= s? n?))
+                         (newstring (- i index) #\space)
+                         str
+                         (self cdr.s (+ lines 1))))))
         (fn (s lines x)
           (cons (string str x)
                 (next s lines)))))))

@@ -1,4 +1,4 @@
-Nuit (pronounced "knew it" or "new eat") is a very simple format for describing structured text. It is short for "Nu Indented Text"
+Nuit (pronounced "knew it" or "new eat") is a format for describing structured text. It is short for "Nu Indented Text"
 
 Nuit attempts to combine the ease-of-use and conciseness of YAML with the simplicity of S-expressions.
 
@@ -44,44 +44,50 @@ There are special characters that can only appear at the start of a line. They a
         Nuit  @foo @bar qux
         JSON  ["foo", ["bar", "qux"]]
 
-  3. The line starting with `@` is the "first line". Look at the second line and see if it has a greater indent than the first line. If not, then it is not added to the list:
+  3. Look at the second line and see if it has a greater indent than the first line. If not, then it is not added to the list:
 
         Nuit  @foo bar qux
-              yes
+              corge
         JSON  ["foo", "bar qux"]
 
   4. If the second line *does* have a greater indent than the first line then it is added to the list:
 
           Nuit  @foo bar qux
-                  yes
-          JSON  ["foo", "bar qux", "yes"]
+                  corge
+          JSON  ["foo", "bar qux", "corge"]
 
-  5. Every line after the second line that has the *same indent* as the second line is added to the list:
+  5. Every line after the second line that has the **same indent** as the second line is added to the list:
 
         Nuit  @foo bar qux
-                yes
-                @maybe
+                corge
+                maybe
                 someday
                   not included
-        JSON  ["foo", "bar qux", "yes", ["maybe"], "someday"]
+        JSON  ["foo", "bar qux", "corge", "maybe", "someday"]
 
   6. The above rules are recursive, which allows lists to nest within lists:
 
         Nuit  @foo @bar qux
-                     corge nou
-                yes
+                     yes nou
+                corge
                 @maybe
                   @
                   someday
-        JSON  ["foo", ["bar", "qux", "corge nou"] "yes" ["maybe", [], "someday"]]
+        JSON  ["foo", ["bar", "qux", "yes nou"] "corge" ["maybe", [], "someday"]]
 
 * The `#` and \` and `"` sigils use the following indent rules:
 
-  1. Find the number of characters between the start of the line (including indentation) and the first non-whitespace[1] character after the sigil. Let's call that number `index`.
+  1. Find the number of characters between the start of the line (including indentation) and the first non-whitespace[1] character after the sigil. Let's call that number `index`
 
-  2. If there aren't any non-whitespace[1] characters after the sigil, then `index` is the indentation + the sigil + `1`
+  2. If there aren't any non-whitespace[1] characters after the sigil, then the first line is ignored and `index` is the indentation + the sigil:
 
-  3. Everything between `index` and the end of the line[2] is included in the sigil:
+        Nuit  `
+                 foobar
+               quxcorge
+               nou yes
+        JSON  "  foobar\nquxcorge\nnou yes"
+
+  3. Otherwise, everything between `index` and the end of the line[2] is included in the sigil:
 
         Nuit  ` foobar
         JSON  "foobar"
@@ -114,38 +120,38 @@ There are special characters that can only appear at the start of a line. They a
 
   * 1 empty line is converted to a space[1]:
 
-        Nuit  " foobar
-                quxcorge
-                nou
-        JSON  "foobar quxcorge nou"
+            Nuit  " foobar
+                    quxcorge
+                    nou
+            JSON  "foobar quxcorge nou"
 
   * 2+ empty lines are left unchanged:
 
-        Nuit  " foobar
+            Nuit  " foobar
 
-                quxcorge
+                    quxcorge
 
-                nou
-        JSON  "foobar\n\nquxcorge\n\nnou"
+                    nou
+            JSON  "foobar\n\nquxcorge\n\nnou"
 
   * Within the string, `\` has the following meaning:
 
    * `\` at the end of the line[2] inserts a literal newline, except at the end of the string, in which case it does nothing:
 
-        Nuit  " foobar\
-                quxcorge\
-                nou\
-        JSON  "foobar\nquxcorge\nnou"
+            Nuit  " foobar\
+                    quxcorge\
+                    nou\
+            JSON  "foobar\nquxcorge\nnou"
 
    * `\\` inserts a literal `\`:
 
-        Nuit  " foo\\bar
-        JSON  "foo\\bar"
+            Nuit  " foo\\bar
+            JSON  "foo\\bar"
 
    * `\u` starts a Unicode code point escape[3]:
 
-        Nuit  " foo\u(20 20AC)bar
-        JSON  "foo\u20\20ACbar"
+            Nuit  " foo\u(20 20AC)bar
+            JSON  "foo\u20\20ACbar"
 
 * The `\` sigil creates a string which contains the next sigil and continues until the end of the line[2]:
 
