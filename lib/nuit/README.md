@@ -26,128 +26,128 @@ Syntax
 
 There are special characters that can only appear at the start of a line. They are called sigils:
 
-  * The `@` sigil creates a list:
+ * The `@` sigil creates a list:
 
-    1. If there's any non-whitespace[1] immediately after the `@` it is added to the list as a string:
+   1. If there's any non-whitespace[1] immediately after the `@` it is added to the list as a string:
 
-            Nuit  @foo
-            JSON  ["foo"]
+          Nuit  @foo
+          JSON  ["foo"]
 
-    2. After the first string (if any), if there's any whitespace[1] followed by non-whitespace[1], it is treated as a new line and added to the list:
+   2. After the first string (if any), if there's any whitespace[1] followed by non-whitespace[1], it is treated as a new line and added to the list:
 
-            Nuit  @foo bar
-            JSON  ["foo", "bar"]
+          Nuit  @foo bar
+          JSON  ["foo", "bar"]
 
-            Nuit  @ foo bar
-            JSON  ["foo bar"]
+          Nuit  @ foo bar
+          JSON  ["foo bar"]
 
-            Nuit  @foo @bar qux
-            JSON  ["foo", ["bar", "qux"]]
+          Nuit  @foo @bar qux
+          JSON  ["foo", ["bar", "qux"]]
 
-    3. The line starting with `@` is the "first line". Look at the second line and see if it has a greater indent than the first line. If not, then it is not added to the list:
+   3. The line starting with `@` is the "first line". Look at the second line and see if it has a greater indent than the first line. If not, then it is not added to the list:
 
-            Nuit  @foo bar qux
+          Nuit  @foo bar qux
+                yes
+          JSON  ["foo", "bar qux"]
+
+   4. If the second line *does* have a greater indent than the first line then it is added to the list:
+
+          Nuit  @foo bar qux
                   yes
-            JSON  ["foo", "bar qux"]
+          JSON  ["foo", "bar qux", "yes"]
 
-    4. If the second line *does* have a greater indent than the first line then it is added to the list:
+   5. Every line after the second line that has the *same indent* as the second line is added to the list:
 
-            Nuit  @foo bar qux
-                    yes
-            JSON  ["foo", "bar qux", "yes"]
+          Nuit  @foo bar qux
+                  yes
+                  @maybe
+                  someday
+                    not included
+          JSON  ["foo", "bar qux", "yes", ["maybe"], "someday"]
 
-    5. Every line after the second line that has the *same indent* as the second line is added to the list:
+   6. The above rules are recursive, which allows lists to nest within lists:
 
-            Nuit  @foo bar qux
-                    yes
-                    @maybe
+          Nuit  @foo @bar qux
+                       corge nou
+                  yes
+                  @maybe
+                    @
                     someday
-                      not included
-            JSON  ["foo", "bar qux", "yes", ["maybe"], "someday"]
+          JSON  ["foo", ["bar", "qux", "corge nou"] "yes" ["maybe", [], "someday"]]
 
-    6. The above rules are recursive, which allows lists to nest within lists:
+ * The `#` and \` and `"` sigils use the following indent rules:
 
-            Nuit  @foo @bar qux
-                         corge nou
-                    yes
-                    @maybe
-                      @
-                      someday
-            JSON  ["foo", ["bar", "qux", "corge nou"] "yes" ["maybe", [], "someday"]]
+   1. Find the number of characters between the start of the line (including indentation) and the first non-whitespace[1] character after the sigil. Let's call that number `index`.
 
-  * The `#` and \` and `"` sigils use the following indent rules:
+   2. If there aren't any non-whitespace[1] characters after the sigil, then `index` is the indentation + the sigil + `1`
 
-     1. Find the number of characters between the start of the line (including indentation) and the first non-whitespace[1] character after the sigil. Let's call that number `index`.
+   3. Everything between `index` and the end of the line[2] is included in the sigil:
 
-     2. If there aren't any non-whitespace[1] characters after the sigil, then `index` is the indentation + the sigil + `1`
+          Nuit  ` foobar
+          JSON  "foobar"
 
-     3. Everything between `index` and the end of the line[2] is included in the sigil:
+   4. Every following line that has an indent that is greater than or equal to `index` is included in the sigil:
 
-             Nuit  ` foobar
-             JSON  "foobar"
-
-     4. Every following line that has an indent that is greater than or equal to `index` is included in the sigil:
-
-             Nuit  `    foobar
-                         quxcorge
-                        nou
-                      not included
-             JSON  "foobar\n quxcorge\nnou"
-
-     5. Empty lines are also included, regardless of their indentation:
-
-             Nuit  ` foobar
+          Nuit  `    foobar
                       quxcorge
+                     nou
+                   not included
+          JSON  "foobar\n quxcorge\nnou"
+
+   5. Empty lines are also included, regardless of their indentation:
+
+          Nuit  ` foobar
+                   quxcorge
+
+                  nou
+
+                  yes
+          JSON  "foobar\n quxcorge\n\nnou\n\nyes"
+
+   In addition, the following rules apply to the individual sigils:
+
+     * `#` completely ignores everything that is included by the above indent rules.
+
+     * \` creates a string which contains everything that is included by the above indent rules.
+
+     * `"` is exactly like \` except:
+
+       * 1 empty line is converted to a space[1]:
+
+             Nuit  " foobar
+                     quxcorge
+                     nou
+             JSON  "foobar quxcorge nou"
+
+       * 2+ empty lines are left unchanged:
+
+             Nuit  " foobar
+
+                     quxcorge
 
                      nou
+             JSON  "foobar\n\nquxcorge\n\nnou"
 
-                     yes
-             JSON  "foobar\n quxcorge\n\nnou\n\nyes"
+       * Within the string, `\` has the following meaning:
 
-    In addition, the following rules apply to the individual sigils:
+         * `\` at the end of the line[2] inserts a literal newline, except at the end of the string, in which case it does nothing:
 
-      * `#` completely ignores everything that is included by the above indent rules.
+               Nuit  " foobar\
+                       quxcorge\
+                       nou\
+               JSON  "foobar\nquxcorge\nnou"
 
-      * \` creates a string which contains everything that is included by the above indent rules.
+         * `\\` inserts a literal `\`:
 
-      * `"` is exactly like \` except:
+               Nuit  " foo\\bar
+               JSON  "foo\\bar"
 
-          * 1 empty line is converted to a space[1]:
+         * `\u` starts a Unicode code point escape[3]:
 
-                Nuit  " foobar
-                        quxcorge
-                        nou
-                JSON  "foobar quxcorge nou"
+               Nuit  " foo\u(20 20AC)bar
+               JSON  "foo\u20\20ACbar"
 
-          * 2+ empty lines are left unchanged:
-
-                Nuit  " foobar
-
-                        quxcorge
-
-                        nou
-                JSON  "foobar\n\nquxcorge\n\nnou"
-
-          * Within the string, `\` has the following meaning:
-
-              * `\` at the end of the line[2] inserts a literal newline, except at the end of the string, in which case it does nothing:
-
-                    Nuit  " foobar\
-                            quxcorge\
-                            nou\
-                    JSON  "foobar\nquxcorge\nnou"
-
-              * `\\` inserts a literal `\`:
-
-                    Nuit  " foo\\bar
-                    JSON  "foo\\bar"
-
-              * `\u` starts a Unicode code point escape[3]:
-
-                    Nuit  " foo\u(20 20AC)bar
-                    JSON  "foo\u20\20ACbar"
-
-  * The `\` sigil creates a string which contains the next sigil and continues until the end of the line[2]:
+ * The `\` sigil creates a string which contains the next sigil and continues until the end of the line[2]:
 
         Nuit  \@foobar
         JSON  "@foobar"
