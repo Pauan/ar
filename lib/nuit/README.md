@@ -26,7 +26,7 @@ Syntax
 
 There are special characters that can only appear at the start of a line. They are called sigils:
 
-* The `@` sigil creates a list:
+The `@` sigil creates a list:
 
   1. If there's any non-whitespace[1] immediately after the `@` it is added to the list as a string:
 
@@ -75,7 +75,9 @@ There are special characters that can only appear at the start of a line. They a
                   someday
         JSON  ["foo", ["bar", "qux", "yes nou"] "corge" ["maybe", [], "someday"]]
 
-* The `#` and \` and `"` sigils use the following indent rules:
+---
+
+The `#` and \` and `"` sigils use the following indent rules:
 
   1. Find the number of characters between the start of the line (including indentation) and the first non-whitespace[1] character after the sigil. Let's call that number `index`
 
@@ -112,11 +114,11 @@ There are special characters that can only appear at the start of a line. They a
 
  In addition, the following rules apply to the individual sigils:
 
-  * `#` completely ignores everything that is included by the above indent rules.
+ `#` completely ignores everything that is included by the above indent rules.
 
-  * \` creates a string which contains everything that is included by the above indent rules.
+ \` creates a string which contains everything that is included by the above indent rules.
 
-  * `"` is exactly like \` except:
+ `"` is exactly like \` except:
 
    * Newline[2] is converted to a space[1]:
 
@@ -136,25 +138,26 @@ There are special characters that can only appear at the start of a line. They a
 
    * Within the string, `\` has the following meaning:
 
-    `\` at the end of the line[2] inserts a literal newline, except at the end of the string, in which case it does nothing:
+     `\` at the end of the line[2] inserts a literal newline, except at the end of the string, in which case it does nothing:
 
           Nuit  " foobar\
                   quxcorge\
                   nou\
           JSON  "foobar\nquxcorge\nnou"
 
-    `\\` inserts a literal `\`:
+     `\\` inserts a literal `\`:
 
           Nuit  " foo\\bar
           JSON  "foo\\bar"
 
-    `\u` starts a Unicode code point escape[3]:
+     `\u` starts a Unicode code point escape[3]:
 
           Nuit  " foo\u(20 20AC)bar
           JSON  "foo\u20\20ACbar"
 
+---
 
-* The `\` sigil creates a string which contains the next sigil and continues until the end of the line[2]:
+The `\` sigil creates a string which contains the next sigil and continues until the end of the line[2]:
 
         Nuit  \@foobar
         JSON  "@foobar"
@@ -170,6 +173,8 @@ There are special characters that can only appear at the start of a line. They a
 
         Nuit  \\foobar
         JSON  "\\foobar"
+
+---
 
 If a line does not start with any of the above sigils it is treated as a string that continues until the end of the line[2].
 
