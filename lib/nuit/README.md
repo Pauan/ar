@@ -52,9 +52,9 @@ The `@` sigil creates a list:
 
   4. If the second line *does* have a greater indent than the first line then it is added to the list:
 
-          Nuit  @foo bar qux
-                  corge
-          JSON  ["foo", "bar qux", "corge"]
+        Nuit  @foo bar qux
+                corge
+        JSON  ["foo", "bar qux", "corge"]
 
   5. Every line after the second line that has the **same indent** as the second line is added to the list:
 
@@ -120,7 +120,7 @@ In addition, the following rules apply to the individual sigils:
 
  * `"` is exactly like \` except:
 
-   * Newline[2] is converted to a space[1]:
+   * Newlines[2] are converted to spaces[1]:
 
             Nuit  " foobar
                     quxcorge
@@ -140,39 +140,39 @@ In addition, the following rules apply to the individual sigils:
 
      `\` at the end of the line[2] inserts a literal newline, except at the end of the string, in which case it does nothing:
 
-          Nuit  " foobar\
-                  quxcorge\
-                  nou\
-          JSON  "foobar\nquxcorge\nnou"
+            Nuit  " foobar\
+                    quxcorge\
+                    nou\
+            JSON  "foobar\nquxcorge\nnou"
 
      `\\` inserts a literal `\`:
 
-          Nuit  " foo\\bar
-          JSON  "foo\\bar"
+            Nuit  " foo\\bar
+            JSON  "foo\\bar"
 
      `\u` starts a Unicode code point escape[3]:
 
-          Nuit  " foo\u(20 20AC)bar
-          JSON  "foo\u20\20ACbar"
+            Nuit  " foo\u(20 20AC)bar
+            JSON  "foo\u20\20ACbar"
 
 ---
 
 The `\` sigil creates a string which contains the next sigil and continues until the end of the line[2]:
 
-        Nuit  \@foobar
-        JSON  "@foobar"
+    Nuit  \@foobar
+    JSON  "@foobar"
 
-        Nuit  \#foobar
-        JSON  "#foobar"
+    Nuit  \#foobar
+    JSON  "#foobar"
 
-        Nuit  \`foobar
-        JSON  "`foobar"
+    Nuit  \`foobar
+    JSON  "`foobar"
 
-        Nuit  \"foobar
-        JSON  "\"foobar"
+    Nuit  \"foobar
+    JSON  "\"foobar"
 
-        Nuit  \\foobar
-        JSON  "\\foobar"
+    Nuit  \\foobar
+    JSON  "\\foobar"
 
 ---
 
