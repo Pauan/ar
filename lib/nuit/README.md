@@ -112,20 +112,20 @@ There are special characters that can only appear at the start of a line. They a
 
  In addition, the following rules apply to the individual sigils:
 
- * `#` completely ignores everything that is included by the above indent rules.
+  * `#` completely ignores everything that is included by the above indent rules.
 
- * \` creates a string which contains everything that is included by the above indent rules.
+  * \` creates a string which contains everything that is included by the above indent rules.
 
- * `"` is exactly like \` except:
+  * `"` is exactly like \` except:
 
-  * Newline[2] is converted to a space[1]:
+   * Newline[2] is converted to a space[1]:
 
             Nuit  " foobar
                     quxcorge
                     nou
             JSON  "foobar quxcorge nou"
 
-  * Empty lines are left unchanged:
+   * Empty lines are left unchanged:
 
             Nuit  " foobar
 
@@ -134,24 +134,24 @@ There are special characters that can only appear at the start of a line. They a
                     nou
             JSON  "foobar\n\nquxcorge\n\nnou"
 
-  * Within the string, `\` has the following meaning:
+   * Within the string, `\` has the following meaning:
 
     `\` at the end of the line[2] inserts a literal newline, except at the end of the string, in which case it does nothing:
 
-            Nuit  " foobar\
-                    quxcorge\
-                    nou\
-            JSON  "foobar\nquxcorge\nnou"
+          Nuit  " foobar\
+                  quxcorge\
+                  nou\
+          JSON  "foobar\nquxcorge\nnou"
 
     `\\` inserts a literal `\`:
 
-            Nuit  " foo\\bar
-            JSON  "foo\\bar"
+          Nuit  " foo\\bar
+          JSON  "foo\\bar"
 
     `\u` starts a Unicode code point escape[3]:
 
-            Nuit  " foo\u(20 20AC)bar
-            JSON  "foo\u20\20ACbar"
+          Nuit  " foo\u(20 20AC)bar
+          JSON  "foo\u20\20ACbar"
 
 
 * The `\` sigil creates a string which contains the next sigil and continues until the end of the line[2]:
