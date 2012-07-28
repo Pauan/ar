@@ -136,19 +136,19 @@ There are special characters that can only appear at the start of a line. They a
 
   * Within the string, `\` has the following meaning:
 
-    * `\` at the end of the line[2] inserts a literal newline, except at the end of the string, in which case it does nothing:
+    `\` at the end of the line[2] inserts a literal newline, except at the end of the string, in which case it does nothing:
 
             Nuit  " foobar\
                     quxcorge\
                     nou\
             JSON  "foobar\nquxcorge\nnou"
 
-    * `\\` inserts a literal `\`:
+    `\\` inserts a literal `\`:
 
             Nuit  " foo\\bar
             JSON  "foo\\bar"
 
-    * `\u` starts a Unicode code point escape[3]:
+    `\u` starts a Unicode code point escape[3]:
 
             Nuit  " foo\u(20 20AC)bar
             JSON  "foo\u20\20ACbar"
