@@ -114,20 +114,20 @@ The `#` and \` and `"` sigils use the following indent rules:
 
 In addition, the following rules apply to the individual sigils:
 
- * `#` completely ignores everything that is included by the above indent rules.
+`#` completely ignores everything that is included by the above indent rules.
 
- * \` creates a string which contains everything that is included by the above indent rules.
+\` creates a string which contains everything that is included by the above indent rules.
 
- * `"` is exactly like \` except:
+`"` is exactly like \` except:
 
-   * Newlines[2] are converted to spaces[1]:
+  * Newlines[2] are converted to spaces[1]:
 
             Nuit  " foobar
                     quxcorge
                     nou
             JSON  "foobar quxcorge nou"
 
-   * Empty lines are left unchanged:
+  * Empty lines are left unchanged:
 
             Nuit  " foobar
 
@@ -136,7 +136,7 @@ In addition, the following rules apply to the individual sigils:
                     nou
             JSON  "foobar\n\nquxcorge\n\nnou"
 
-   * Within the string, `\` has the following meaning:
+  * Within the string, `\` has the following meaning:
 
      `\` at the end of the line[2] inserts a literal newline, except at the end of the string, in which case it does nothing:
 
