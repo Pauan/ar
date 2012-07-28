@@ -24,7 +24,7 @@ Nuit has only lists and strings. Lists can be nested within lists which allows f
 Syntax
 ======
 
-There are special characters that can only appear at the start of a line. They are called sigils:
+There are special characters that can only appear at the start of a line. They are called sigils.
 
 The `@` sigil creates a list:
 
@@ -112,13 +112,13 @@ The `#` and \` and `"` sigils use the following indent rules:
                 yes
         JSON  "foobar\n quxcorge\n\nnou\n\nyes"
 
- In addition, the following rules apply to the individual sigils:
+In addition, the following rules apply to the individual sigils:
 
- `#` completely ignores everything that is included by the above indent rules.
+ * `#` completely ignores everything that is included by the above indent rules.
 
- \` creates a string which contains everything that is included by the above indent rules.
+ * \` creates a string which contains everything that is included by the above indent rules.
 
- `"` is exactly like \` except:
+ * `"` is exactly like \` except:
 
    * Newline[2] is converted to a space[1]:
 
@@ -178,11 +178,15 @@ The `\` sigil creates a string which contains the next sigil and continues until
 
 If a line does not start with any of the above sigils it is treated as a string that continues until the end of the line[2].
 
+---
+
 Whitespace[1] is *completely* ignored at the end of the line[2], even within strings.
 
 Except within strings, empty lines are *completely* ignored. They don't even count for indentation.
 
 It is invalid for a non-empty line to be indented if it is not within a list, comment, or string.
+
+---
 
 There is an implicit list that contains the entire Nuit text. Which means this:
 
