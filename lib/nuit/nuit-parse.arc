@@ -5,232 +5,275 @@
    nuit-nonprinting  (string "\u0-\u8\uE-\u1F\u7F\u80-\u84\u86-\u9F\uFDD0-\uFDEF"
                              "\uFEFF\uFFFE\uFFFF\U1FFFE\U1FFFF\U10FFFE\U10FFFF")
    nuit-end-of-line  "(?:\uD\uA|[\uD\uA]|$)"
-   nuit-invalid      (string nuit-whitespace nuit-nonprinting)
-   nuit-fail         (uniq))
+   nuit-invalid      (string nuit-whitespace nuit-nonprinting))
+
+(def f-err (message line lines column)
+  (err:string message "\n  " line
+    "  (line " lines ", column " column ")\n"
+    " " (newstring column #\space) "^"))
+
+(def nuit-normalize (s)
+  ;; Byte Order Mark may only appear at the start of the stream and is ignored
+  (re-match "^\uFEFF" s)
+  (alet lines 1
+    (when peekc.s
+                 ;; Different line endings are converted to U+000A
+      (withs (x  (cadr:re-match (string "^([^\r\n]*)" nuit-end-of-line) s)
+                 ;; U+0020 at the end of the line is ignored
+              x  (re-replace " +$" x ""))
+                     ;; Invalid characters are not allowed anywhere
+        (iflet (pos) (re-posmatch1 (string "[" nuit-invalid "]") x)
+          (f-err (string "invalid character " x.pos) x lines (+ pos 1))
+          (cons x (self (+ lines 1))))))))
+
+(def nuit-indent (s)
+  (cdr:re-match "^( *)(.*)" s))
+
+;; Calls `f`, passing it the `self` iterator and the line state
+;;
+;; When `f` terminates, it will optionally call `after` with the lines,
+;; line number, and the result of `f`
+;;
+;; `after` behaves somewhat like a continuation, letting you throw control
+;; back to a different area of the program while maintaining the correct
+;; line state
+(def nuit-while1 (s lines f (o after))
+  (let x (awith (s2      s
+                 lines2  lines)
+           (= s s2 lines lines2)
+           (when s
+             (let (i str) (nuit-indent car.s2)
+               (f self s2 lines2 len.i str))))
+    (if after
+        (after s lines x)
+        x)))
+
+;; Helper function that's used a lot
+;;
+;; Exactly like `nuit-while1` except empty lines are always ignored
+(def nuit-while (s lines f (o after))
+  (nuit-while1 s lines (fn (self s lines i str)
+                         (if (is str "")
+                             (self cdr.s (+ lines 1))
+                             (f self s lines i str)))
+                       after))
+
+;; Finds the indent of the first line that has an indent greater than `index`
+;;
+;; If it finds a non-empty line that has an indent less than or equal to
+;; `index` it will return `nil`
+(def nuit-find-indent (index s)
+  (nuit-while s 0
+    (fn (self s lines i str)
+      (when (and index (>= i index)) i))))
+
+;; Returns a function that is suitable for passing to `nuit-while`
+;;
+;; It will return a list of parsed values that have an indent that is
+;; matched by `op` and `index`
+;;
+;; If `op` doesn't match the indent it will optionally call `f` to return an
+;; alternate result
+(def nuit-parse-index (op index (o f))
+  (fn (self s lines i str)
+    (if (op i index)
+          (aif (nuit-parsers str.0)
+               (it self s lines (+ i 1) (cut str 1))
+               (cons str (self cdr.s (+ lines 1))))
+        f
+          (f self s lines i str))))
+
+;; Parses an inline expression. It's only used for the second item in @
+(def nuit-parse-inline (s lines i str f)
+  (aif (nuit-parsers str.0)
+       (let x (it (fn (s2 lines2)
+                    (= s s2 lines lines2)
+                    nil)
+                  #|(nuit-while s lines
+                    (nuit-parse-index is index)
+                    (fn (s2 lines2 x)
+                       x))|#
+                  s lines (+ i 1) (cut str 1))
+         (f s lines x))
+       (f cdr.s (+ lines 1) (list str))))
+
+(def nuit-parse-string (sep (o f))
+  (fn (next s lines index str)
+    (withs ((i  str)  nuit-indent.str
+            index     (+ index len.i)
+            (s? str)  (if f (f sep s lines index str)
+                            (list sep str)))
+      (nuit-while1 cdr.s (+ lines 1)
+        (fn (self s lines i str)
+          (if (is str "")
+                (do (= s? #\newline)
+                    (cons #\newline (self cdr.s (+ lines 1))))
+              (>= i index)
+                (let (n? str) (if f (f sep s lines i str)
+                                    (list sep str))
+                  (do1 (list* s?
+                              (newstring (max 0 (- i index)) #\space)
+                              str
+                              (self cdr.s (+ lines 1)))
+                       (= s? n?)))))
+        (fn (s lines x)
+          (cons (string str x)
+                (next s lines)))))))
+
+(def nuit-hex->char (x)
+  (coerce (coerce x 'int 16) 'char))
+
+(def nuit-parse-unicode (next s lines i str)
+  (if (re-match "^\\(" str)
+      (alet i i
+        (let (h end) (cdr:re-match "([0-9a-fA-F]*)(.?)" str)
+          (let i (+ i len.h 1)
+            (case end
+              " " (cons (nuit-hex->char h)
+                        (self i))
+              ")" (cons (nuit-hex->char h)
+                        (next i))
+              ""  (f-err "missing space or )" car.s lines (+ i 1))
+                  (f-err (string "invalid hexadecimal " end)
+                         car.s lines (+ i 1))))))
+      (f-err "missing (" car.s lines (+ i 1))))
+
+(def nuit-parse-escape (sep s lines i str)
+  (withs (str  (instring str)
+          x    (alet i i
+                 (let (start end) (cdr:re-match "^(.*?)\\\\(.?)" str)
+                   (let i (+ i len.start 2)
+                         ;; The character \ wasn't found in the string
+                     (if (no start)
+                           (list allchars.str)
+                         ;; The character \ is the last character in the string
+                         (is end "")
+                           (do (= sep #\newline)
+                               start)
+                         (is end "\\")
+                           (list* start end self.i)
+                         (is end "u")
+                           (cons start (nuit-parse-unicode self s lines i str))
+                         (f-err (string "invalid escape " end)
+                                car.s lines i))))))
+    (list sep string.x)))
+
+#|
+(def range2 (next l h)
+  ...)
+
+(def range1 (next l h)
+  (if (< l h)
+      (cons l (next (+ l 1) h))
+      nil))
+
+(def range (l h)
+  (awith (l  l
+          h  h)
+    (range1 self l h)))
+
+(def range (l h)
+  ((afn (l h)
+     (range1 self l h))
+   l h))
+
+(def range (l h)
+  (let self nil
+    (= self (fn (l h)
+              (range1 self l h)))
+    (self l h)))
+
+(def range (l h)
+  (let next (fn (next l h)
+              (range1 (fn (l h)
+                        (next next l h))
+                      l h))
+    (next next l h)))
+
+
+(def range (l h)
+  (if (< l h)
+      (cons l (range (+ l 1) h))
+      nil))
+
+(def range (cont l h)
+  (if (< l h)
+      (cont (cons l (range cont (+ l 1) h)))
+      (cont nil)))
+|#
 
 (= nuit-parsers
-  (obj #\@ (fn (while parse next indent rest)
-             (withs ((_ x i y)  (re-match "^([^ ]*)( *)(.*)$" rest)
-                     s          (car:parse (fn ()) (+ (len:string x i) 1) y)
-                                         #|(while:fn (next i str)
-                                           (if (is str "")
-                                                 (next)
-                                               (is i limit)
-                                                 (parse next i str)))|#
-                     limit      nil
-                     line       nil
-                     rest       (while:fn (next i str)
-                                  (prn i " " indent " " str)
-                                  (if (is str "")
-                                        (next)
-                                      (>= i indent)
-                                        (do (or= limit i)
-                                            (if (is i limit)
-                                                (parse next i str)
-                                                (do (= line (list i str))
-                                                    nil)))
-                                      (do (= line (list i str))
-                                          nil)
-                                          #|(let x
-                                            (cons x (next)))|#
-                                          #|(if (is x nuit-fail)
-                                              ;x
-                                              (next)
-                                              (cons x (next)))|#
-                                          )))
-                                                    ;;(f-err "invalid indentation" i)
-               ;(prn "foo " s)
-               (cons (if (is x "")
-                         (if (is y "")
-                             rest
-                             (cons s rest))
-                         (if (is y "")
-                             (cons x rest)
-                             (list* x s rest)))
-                     (if line (apply parse next line)
-                              (next)))))
-       #\# (fn (while parse next i rest)
-             (let line nil
-               (let limit (len:re-match1 "^ *" rest)
-                 (while:fn (next i str)
-                   (if (or (is str "")
-                           (>= i limit))
-                       (next)
-                       (= line (list i str)))))
-               (if line (apply parse next line)
-                        (next))))
-       #\` (fn (while parse next i rest)
-             (cons (nuit-string while i rest #\newline) (next)))
-       #\" (fn (while parse next i rest)
-             (cons (nuit-string while i rest #\space nuit-string-escape) (next)))
-       #\\ (fn (while parse next i rest)
-             (if (nuit-parsers rest.0)
-                 (cons rest (next))
-                 (f-err (string "invalid escape " rest.0) (+ i 1))))))
+   (obj #\@ (fn (next s lines i str)
+              (let (first space rest) (cdr:re-match "^([^ ]*)( *)(.*)" str)
+                (let body (fn (s lines rest)
+                            (let index (nuit-find-indent i s)
+                              (nuit-while s lines
+                                (nuit-parse-index is index)
+                                (fn (s lines x)
+                                  (let x rest.x
+                                    (cons (if (is first "")
+                                              x
+                                              (cons first x))
+                                          (next s lines)))))))
+                  (if (is rest "")
+                      (body cdr.s (+ lines 1) idfn)
+                      (let i (+ i (len:string first space))
+                        (nuit-parse-inline s lines i rest
+                          (fn (s lines x)
+                            (if x
+                                (body s lines (fn (y) (cons car.x y)))
+                                (body s lines idfn)))))))))
+        #\# (fn (next s lines i str)
+              (let index (+ i (len:re-match1 "^ *" str))
+                (nuit-while cdr.s (+ lines 1)
+                  ;; Consumes all the lines that have an indent greater
+                  ;; than or equal to `index`
+                  (fn (self s lines i str)
+                    (when (>= i index)
+                      (self cdr.s (+ lines 1))))
+                  ;; Calls `next` so that the value of # is ignored
+                  (fn (s lines x)
+                    (next s lines)))))
+        #\` (nuit-parse-string #\newline)
+        #\" (nuit-parse-string #\space nuit-parse-escape)
+        #\\ (fn (next s lines i str)
+              (aif (nuit-parsers str.0)
+                   (cons str (next cdr.s (+ lines 1)))
+                   (f-err (string "invalid escape " str.0)
+                          car.s lines (+ i 1))))))
 
-(def nuit-string-escape (sep i str)
-  (let str (string:awith (x  (coerce str 'cons)
-                          i  (+ i 1))
-             (whenlet (x . rest) x
-               (if (is x #\\)
-                   (case car.rest
-                     #\\ (cons car.rest (self cdr.rest (+ i 2)))
-                     #\u (nuit-parse-unicode self cdr.rest (+ i 2))
-                     nil (do (= sep nil)
-                             (list #\newline))
-                         (f-err (string "invalid escape " car.rest) (+ i 1)))
-                   (cons x (self rest (+ i 1))))))
-    (list sep str)))
+(def nuit-parse (s)
+  (nuit-while (nuit-normalize (if (isa s 'string)
+                                  (instring s)
+                                  s))
+              1
+    #|(fn (self s lines i str)
+      (if (is i 0)
+          (aif (nuit-parsers str.0)
+               (it self s lines)
+               (cons str (self cdr.s (+ lines 1))))
+          (f-err "invalid indentation" car.s lines i)))|#
+    (nuit-parse-index is 0
+      (fn (self s lines i str)
+        ;(len:re-match1 "^ *" car.s)
+        (f-err "invalid indentation" car.s lines i)))))
 
-(def nuit-parse-unicode (rest x i)
-  (if (is car.x #\()
-      (let s (instring:string cdr.x)
-        (alet i i
-          (let (_ h e) (re-match "([0-9a-fA-F]*)(.?)" s)
-            (case e
-              " " (cons (coerce (coerce h 'int 16) 'char)
-                        (self (+ i len.h 1)))
-              ")" (cons (coerce (coerce h 'int 16) 'char)
-                        (rest (coerce allchars.s 'cons)
-                              (+ i len.h 1)))
-              ""  (f-err "missing ending )" (+ i len.h 1))
-                  (f-err (string "invalid hexadecimal " e) (+ i len.h 1))))))
-      (f-err "missing starting (" i)))
 
-(def nuit-string (while i rest sep (o f))
-  (withs ((_ limit rest)  (re-match "^( *)(.*)$" rest)
-          limit           (+ i len.limit))
-    (string:let (s? str) (if f (f sep limit rest)
-                               (list sep rest))
-      (let x (while:fn (next i str)
-               (if (is str "")
-                     (do (= s? #\newline)
-                         (list #\newline (next)))
-                     #|(do ;(= n? nil)
-                         (list:string #\newline (next)))|#
-                   (>= i limit)
-                          ;(re-replace (string "^ {0," limit "}") line "")
-                     (let (n? str) (if f (f sep i str)
-                                         (list sep str))
-                       (do1 (list* s?
-                                   (newstring (max 0 (- i limit)) #\space)
-                                   str
-                                   (next))
-                            (= s? n?)))))
-        (cons str x)))))
+#|
+(many (or (seq #\@ (many (not )) )))
 
-#|(def nuit-parse1 (s)
-  (let lines 0
-    (alet limit 0
-      (when peekc.s
-        (++ lines)
-        (withs (line  (cadr:re-match (string "^([^\r\n]*)" nuit-end-of-line) s)
-                line  (re-replace " +$" line "")
-                ls    (instring line))
-          (let indent (len:re-match1 "^ *" ls)
-            (if (and (<= indent limit)
-                     (no peekc.ls))
-                  (self limit)
-                (is indent limit)
-                  (withs (start  (re-match1 (string "^[^" nuit-invalid "]") ls)
-                          rest   (re-match1 (string "^[^" nuit-invalid "]*") ls))
-                    (aif peekc.ls
-                         (f-err (string "invalid character " it)
-                                line lines (+ indent (len:string start rest) 1))
-                         (aif (nuit-parsers rest.0)
-                              (cons (it self rest (list line lines (+ indent 1)))
-                                    (self limit))
-                              (cons (string start rest) self.limit))))
-                (f-err "invalid indentation" line lines indent))))))))|#
 
-(def nuit-indent (line)
-  (let (_ i rest invalid)
-       (re-match (string "^( *)([^" nuit-invalid "]*)(.?)") line)
-    (let i len.i
-      (if (is invalid "")
-          (list i rest)
-          (f-err (string "invalid character " invalid) (+ i len.rest 1))))))
+@ followed by 0 or more characters (convert to string), followed by 0 or more spaces, followed by an optional <parse rest of line at index>, followed by 0 or more <parse lines at indent of second line>
 
-(withs (lines   nil
-        line    nil
-        stream  nil
+# ` or " followed by 0 or more characters (converted to string), followed by 0 or more lines that are greater than or equal to the whitespace between the sigil and the first non-whitespace
 
-        next    (fn ()
-                  (++ lines)
-                  (let x (cadr:re-match (string "^([^\r\n]*)" nuit-end-of-line) stream)
-                    (re-replace " +$" x "")))
+\\ followed by 1 sigil followed by 0 or more <not invalid>
 
-        while   (fn (f)
-                  ;(= line (next))
-                  (awith ()
-                    (when peekc.stream
-                      (= line (next))
-                      (apply f self (nuit-indent line))))
-                  #|(let x (fn (n)
-                           (apply f n (nuit-indent line))
-                             #|(let x
-                               (if (is x nuit-fail)
-                                   (self n)
-                                   x))|#
-                           )
-                    (x (afn ()
-                         (when peekc.stream
-                           (= line (next))
-                           (x self)))))|#
-                )
 
-        parse   (afn (next i str)
-                  (aif (and (no empty.str)
-                            (nuit-parsers str.0))
-                       (let x (it while self next (+ i 1) (cut str 1))
-                         x
-                         #|(if (is x nuit-fail)
-                             ;(when peekc.stream
-                               ;(= line (next)))
-                             (apply self (nuit-indent line))
-                             x)|#
-                         )
-                       (cons str (next)))))
+#
+`
+"
 
-  (def f-err (message column)
-    (err:string message "\n  " line
-      "  (line " lines ", column " column ")\n"
-      " " (newstring column #\space) "^"))
-
-  #|(def parse (i str)
-    (aif (and (no empty.str)
-              (nuit-parsers str.0))
-         (do (= line (next))
-             (it while parse (+ i 1) (cut str 1)))
-         str))|#
-
-  (def nuit-parse (s)
-    (= stream (if (isa s 'string)
-                  (instring s)
-                  s))
-    ;; Byte Order Mark may appear at the start of the stream but is ignored
-    (re-match "^\uFEFF" stream)
-    ;; Initialization
-    (= lines 0)
-    ;(= line (next))
-    #|(w/nuit-current-lines 0
-      (w/nuit-current-line (next)))|#
-    ;(= line (next))
-    (awith ()
-      (when peekc.stream
-        (= line (next))
-        (let (i str) (nuit-indent line)
-          (if (is str "")
-                (self)
-              (is i 0)
-                  #|(if (is x nuit-fail)
-                      x)|#
-                      ;(next)
-                      ;(apply self next (nuit-indent line))
-                (parse self i str)
-                #|(let x
-                  (cons x (next)))|#
-              (f-err "invalid indentation" i)))))
-    #|(while:fn (next i str)
-      )|#
-    ))
+"\n\n" -> "\n\n"
+"\n"   -> " "
+|#

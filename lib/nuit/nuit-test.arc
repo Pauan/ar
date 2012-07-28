@@ -76,7 +76,7 @@ yestoo
   maybe sometimes
 "))
 
-(assert (err "missing starting (
+(assert (err "missing (
   \" foo\\uAB01ar  (line 2, column 8)
          ^")
   (nuit-parse "
@@ -86,7 +86,7 @@ yestoo
   maybe sometimes
 "))
 
-(assert (err "missing ending )
+(assert (err "missing space or )
   \" foo\\u(AB01 FA1  (line 2, column 17)
                   ^")
   (nuit-parse "
@@ -115,11 +115,6 @@ yestoo
   nou yes
   maybe sometimes
 "))
-
-(assert (err "invalid whitespace
-  \" foobar\\    (line 2, column 11)
-            ^")
-  (nuit-parse "\n\" foobar\\  \n  quxcorge\\\n  nou yes\\\n  maybe sometimes\n"))
 
 (assert (err "invalid character \u0000
   foo\u0000bar  (line 1, column 4)
@@ -376,7 +371,25 @@ yestoo
 \" foobar\\
   quxcorge\\
   nou yes\\
+  maybe sometimes\\
+"))
+
+(assert '("foobar\nquxcorge\nnou yes\nmaybe sometimes" "mooooooooooo")
+  (nuit-parse "
+\" foobar\\
+  quxcorge\\
+  nou yes\\
   maybe sometimes
+mooooooooooo
+"))
+
+(assert '("foobar\nquxcorge\nnou yes\nmaybe sometimes" "mooooooooooo")
+  (nuit-parse "
+\" foobar\\
+  quxcorge\\
+  nou yes\\
+  maybe sometimes\\
+mooooooooooo
 "))
 
 (assert '("foo\\bar qux €corge nou yes maybe sometimes")
@@ -386,3 +399,6 @@ yestoo
   nou yes
   maybe sometimes
 "))
+
+(assert '("foobar\nquxcorge\nnou yes\nmaybe sometimes")
+  (nuit-parse "\n\" foobar\\  \n  quxcorge\\\n  nou yes\\\n  maybe sometimes\n"))

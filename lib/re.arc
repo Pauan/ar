@@ -62,6 +62,12 @@
 #|(def re-match1 (pattern (o in (stdin)))
   ((re-match pattern in) 1))|#
 
+(def re-posmatch (pattern (o in stdin))
+  (or (%.regexp-match-positions regexp.pattern in) nil))
+
+(def re-posmatch1 (pattern (o in stdin))
+  (car:re-posmatch pattern in))
+
 ; This isn't anchored at the beginning of the input unless you use
 ; "^" yourself.
 (def re-looking-at (pattern (o in stdin))
