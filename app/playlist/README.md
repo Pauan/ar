@@ -19,13 +19,13 @@ If you give a second argument to the playlist program, it will store the
 
     playlist path/to/nuit path/to/xspf
 
-This will cause the program to scan through the "nuit" folder and use
-the Nuit playlists defined within to generate .xspf equivalents.
-It will then store those .xspf playlists in the "xspf" folder.
+The above will scan through the "nuit" folder and use the Nuit playlists
+defined within to generate .xspf equivalents. It will then store those .xspf
+playlists in the "xspf" folder.
 
 To quickly create a playlist, simply create a new file in the "nuit"
-folder and add some lines which specify the music files to include. That's
-it! Now just run the program as specified above.
+folder and add some lines to specify which music files to include. That's
+it! Now just run the program as shown above.
 
 
 The Nuit playlist format
