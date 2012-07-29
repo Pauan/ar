@@ -24,7 +24,7 @@ the Nuit playlists defined within to generate .xspf equivalents.
 It will then store those .xspf playlists in the "Playlists" folder.
 
 To quickly create a playlist, simply create a new file in the "Templates"
-folder and add some lines which specify which music files to include. That's
+folder and add some lines which specify the music files to include. That's
 it! Now just run the program as specified above.
 
 
@@ -70,7 +70,7 @@ starts with `@` and is followed by a name and a string. Let's look at the
     Far Away Memories
     Rotted Garden
 
-Here we've specified that the title of the playlist is "Chrono Trigger". By
+Here we've specified that the title of the playlist is `Chrono Trigger`. By
 default, the playlist program uses the template's filename as the title, but
 you can use `@title` to override it.
 
@@ -89,7 +89,7 @@ Another list is `@folder`:
       Rotted Garden
 
 The above playlist is just like the previous one except that the files must be
-inside the "Chrono Trigger" folder. This is useful if you have a string which
+inside the `Chrono Trigger` folder. This is useful if you have a string which
 matches two or more files, but the files are in different folders: you can use
 `@folder` to specify which file to match.
 
@@ -112,16 +112,16 @@ Another list is `@playlist`:
         Rotted Garden
 
 The above is just like the previous playlist except that *in addition* to
-adding the files to the current playlist, the files "Moonstone"
-and "Orchestral Balthasar Theme" are added to the playlist "5 Stars", the
-file "Ruined World (Eternal Derelict)" is added to the playlist "4 Stars",
+adding the files to the current playlist, the files `Moonstone`
+and `Orchestral Balthasar Theme` are added to the playlist `5 Stars`, the
+file `Ruined World (Eternal Derelict)` is added to the playlist `4 Stars`,
 etc.
 
 Because of the rule that files may not be matched by multiple strings, this is
 one way to add a file to multiple different playlists. I use this to give a
-rating to my files: as shown above, the "Chrono Trigger" files would be put
-into different "X Star" playlists depending on their rating. But there isn't
-any set semantic: you can use `@playlist` to place files into any playlist.
+rating to my files: as shown above, the files would be put into different
+"X Star" playlists depending on their rating. But there isn't any set
+semantic: you can use `@playlist` to place files into any playlist.
 
 ---
 
@@ -152,8 +152,8 @@ Examples
 ========
 
 I have included a few of my own playlists in the "examples" subdirectory.
+
 These demonstrate how to write playlists, and also clearly show how much
-shorter/easier to read/write the S-expression format is, compared to raw
-.xspf
+shorter/easier to read/write the Nuit format is, compared to raw .xspf
 
 This makes managing playlists a much more pleasant experience.
