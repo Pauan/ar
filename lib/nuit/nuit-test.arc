@@ -23,20 +23,10 @@
    ^")
   (nuit-parse "\\$foobar"))
 
-(assert (err "invalid indentation
-   foobar  (line 1, column 1)
-  ^")
-  (nuit-parse " foobar"))
-
 (assert (err "invalid character \t
   \tfoobar  (line 1, column 1)
   ^")
   (nuit-parse "\tfoobar"))
-
-(assert (err "invalid indentation
-   @foobar  (line 1, column 1)
-  ^")
-  (nuit-parse " @foobar"))
 
 (assert (err "invalid indentation
    yes  (line 4, column 1)
@@ -45,6 +35,32 @@
 @foobar
   @quxnou
  yes
+"))
+
+(assert (err "invalid indentation
+  @foobar  (line 6, column 1)
+  ^")
+  (nuit-parse "
+ @foobar
+   @quxnou
+   yes
+
+@foobar
+  @quxnou
+  yes
+"))
+
+(assert (err "invalid indentation
+     @foobar  (line 6, column 3)
+    ^")
+  (nuit-parse "
+  @foobar
+    @quxnou
+    yes
+
+   @foobar
+    @quxnou
+    yes
 "))
 
 (assert (err "invalid indentation
@@ -140,6 +156,13 @@ yestoo
 \" foo\\u(DFFF)bar"))
 
 
+
+
+(assert '("foobar")
+  (nuit-parse " foobar"))
+
+(assert '(("foobar"))
+  (nuit-parse " @foobar"))
 
 (assert '("foo힙bar")
   (nuit-parse "
@@ -248,6 +271,40 @@ yestoo
    oh my
   @ oh yes
    oh my
+"))
+
+
+(assert '(("foo" "bar" ("testing") "qux \"\"\" yes" "corge 123" "nou@ yes")
+          ("another" "one" "inb4 this#" "next thread"
+            ("nested\\" "lists are cool"
+              ("yes" "indeed")
+              ("no" "maybe"))
+            ("oh yes" "oh my")
+            ("oh yes" "oh my")))
+  (nuit-parse "
+
+    @foo bar
+      @testing
+      qux \"\"\" yes
+
+      corge 123
+      nou@ yes
+
+    @another one
+      inb4 this#
+
+      next thread
+      @nested\\
+        lists are cool
+
+        @yes indeed
+        @no maybe
+      @ oh yes
+
+       oh my
+      @ oh yes
+       oh my
+
 "))
 
 (assert '(() ("foobar" "qux"))

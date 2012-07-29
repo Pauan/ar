@@ -8,9 +8,12 @@
    nuit-invalid      (string nuit-whitespace nuit-nonprinting))
 
 (def f-err (message line lines column)
-  (err:string message "\n  " line
-    "  (line " lines ", column " column ")\n"
-    " " (newstring column #\space) "^"))
+  (let column (if (< column 1)
+                  1
+                  column)
+    (err:string message "\n  " line
+      "  (line " lines ", column " column ")\n"
+      " " (newstring column #\space) "^")))
 
 (def nuit-normalize (s)
   ;; Byte Order Mark may only appear at the start of the stream and is ignored
@@ -195,10 +198,10 @@
                           car.s lines (+ i 1))))))
 
 (def nuit-parse (s)
-  (nuit-while (nuit-normalize (if (isa s 'string)
-                                  (instring s)
-                                  s))
-              1
-    (nuit-parse-index is 0
-      (fn (self s lines i str)
-        (f-err "invalid indentation" car.s lines i)))))
+  (let s (nuit-normalize (if (isa s 'string)
+                             (instring s)
+                             s))
+    (nuit-while s 1
+      (nuit-parse-index is (nuit-find-indent 0 s)
+        (fn (self s lines i str)
+          (f-err "invalid indentation" car.s lines i))))))

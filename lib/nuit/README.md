@@ -153,7 +153,7 @@ In addition, the following rules apply to the individual sigils:
      `\u` starts a Unicode code point escape[3]:
 
         Nuit  " foo\u(20 20AC)bar
-        JSON  "foo\u20\20ACbar"
+        JSON  "foo\u0020\u20ACbar"
 
 ---
 
@@ -183,8 +183,6 @@ If a line does not start with any of the above sigils it is treated as a string 
 Whitespace[1] is *completely* ignored at the end of the line[2], even within strings.
 
 Except within strings, empty lines are *completely* ignored. They don't even count for indentation.
-
-It is invalid for a non-empty line to be indented if it is not within a list, comment, or string.
 
 ---
 
@@ -219,6 +217,10 @@ Is the same as this JSON:
         "11 - Secret of the Forest",
         "36 - The Brink of Time"]
     ]
+
+The implicit list has the same rules as an explicit list, such as: all sub-expressions must have the same indent, empty lines are ignored, etc.
+
+---
 
 That's it! The only thing left to describe is some Unicode stuff.
 
@@ -291,7 +293,7 @@ All other Unicode characters may be used freely.
 
 [3]: A Unicode code point escape starts with `\u(`, contains one or more strings (which must contain only the hexidecimal characters `0123456789abcdefABCDEF`) separated by whitespace[1], and ends with `)`
 
-Each string is the hexadecimal value of a Unicode code point. As an example, the string `"fob` is the same as `"\u(66)\u(6F)\(62)` which is the same as `"\u(66 6F 62)`. Because they are *code points* and not bytes, `\u(1D11E)` represents the Unicode character `𝄞`
+Each string is the hexadecimal value of a Unicode code point. As an example, the string `"fob` is the same as `"\u(66)\u(6F)\u(62)` which is the same as `"\u(66 6F 62)`. Because they are *code points* and not bytes, `\u(1D11E)` represents the Unicode character `𝄞`
 
 Unicode code point escapes are necessary to include invalid characters (listed above). They are also useful in the situation where you don't have an easy way to insert a Unicode character directly, but you do know its code point, e.g. you can represent the string `foo€bar` as `"foo\u(20AC)bar`
 
