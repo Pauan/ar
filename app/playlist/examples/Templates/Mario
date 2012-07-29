@@ -1,41 +1,49 @@
-(title "Mario")
+@playlist 5 Stars
+  Melty Molten
+  SMG Gusty Garden
+  Bob omb s Battlefield
+  Best VGM 530 Super Mario Land Muda Kingdom
+  Super Mario Galaxy 2 Music - Throwback Galaxy
+  mario kart wii music: rainbow road
+  SuperMarioRPGForestMaze
+  Maple Treeway
 
-(w/folder "Super Mario Galaxy"
-  "Freeze Flame (Fire)"
-  "Gateway Galaxy"
-  "Ghostly Galaxy"
-  "Buoy Base"
-  "Toy Time"
-  "Space Junk"
-  "Melty Molten"
-  "SMG Gusty Garden"
-  "Good Egg Galaxy")
+@playlist 4 Stars
+  Buoy Base
+  Toy Time
+  Good Egg Galaxy
+  Super Mario Brothers Main Theme on Mario Paint Composer
+  Best VGM 973 - Super Mario Galaxy 2 - Melty Monster Galaxy
+  Best VGM 13 - Yoshi's Island - Overworld Stage (Theme 4)
+  Mario Kart 64: Rainbow Road
 
-(w/all-files
-  "Best VGM 973 - Super Mario Galaxy 2 - Melty Monster Galaxy"
-  "Best VGM 13 - Yoshi's Island - Overworld Stage (Theme 4)"
-  "Super_Mario_Galaxy_Fill_Me_Up_with_Snacky_Happiness_OC_ReMix"
-  "Best VGM 598 - Super Mario RPG - Going Shopping In Seaside Town"
-  "Super Mario Galaxy 2 Music - Wild Glide - Gliding"
-  "Super Mario Galaxy 2 Music - Cloudy Court Galaxy"
-  "Super Mario Galaxy 2 Music - Throwback Galaxy"
-  "Mario Kart 64: Rainbow Road"
-  "mario kart wii music: rainbow road"
-  "MushroomWayMadness"
-  "SuperMarioRPGForestMaze"
-  "Fight Against Monsters"
-  "Bob-omb Battlefield"
-  "Mario's Pad"
-  "Here's Some Weapons"
-  "Super Mario RPG: Seaside Town (Digitally Remastered)"
-  "Maple Treeway"
-  "Yoshi s Island Melee"
-  "Super Mario Bros 2 Main Theme"
-  "649 Super Mario Bros 3 Overworld"
-  "mesmerizing mammories"
-  "the drunkard song"
-  "Bob omb s Battlefield"
-  "Yoshi s Island Flower Garden"
-  "beware the forest's mushrooms"
-  "B-Mario Ground"
-  "Super Mario RPG Three Mushroom Dances")
+@playlist 3 Stars
+  @folder Brawl
+    B-Mario Ground
+    Yoshi s Island Melee
+  Space Junk
+  Fight Against Monsters
+  Super_Mario_Galaxy_Fill_Me_Up_with_Snacky_Happiness_OC_ReMix
+  Mario's Pad
+  Super Mario RPG: Seaside Town (Digitally Remastered)
+  Super Mario Bros 2 Main Theme
+  Yoshi s Island Flower Garden
+  MushroomWayMadness
+
+@playlist 2 Stars
+  Super Mario Galaxy - Gusty Garden Galaxy Piano Sheets V.2
+  649 Super Mario Bros 3 Overworld
+  Here's Some Weapons
+  Freeze Flame (Fire)
+  Super Mario Galaxy 2 Music - Wild Glide - Gliding
+  Super Mario Galaxy 2 Music - Cloudy Court Galaxy
+  beware the forest's mushrooms
+
+@playlist 1 Stars
+  Super Mario RPG Three Mushroom Dances
+  Bob-omb Battlefield
+  Gateway Galaxy
+  Ghostly Galaxy
+  mesmerizing mammories
+  the drunkard song
+  Best VGM 598 - Super Mario RPG - Going Shopping In Seaside Town

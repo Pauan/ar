@@ -1,7 +1,7 @@
 How to run
 ==========
 
-This is a program for generating .xspf playlists from S-expressions.
+This is a program for generating .xspf playlists from [Nuit text](https://github.com/Pauan/ar/tree/arc/nu/lib/nuit).
 
 It is assumed that all your playlist files will be kept in a single folder.
 
@@ -20,122 +20,132 @@ If you give a second argument to the playlist program, it will store the
     playlist path/to/Templates path/to/Playlists
 
 This will cause the program to scan through the "Templates" folder and use
-the S-expression playlists defined within to generate .xspf equivalents.
+the Nuit playlists defined within to generate .xspf equivalents.
 It will then store those .xspf playlists in the "Playlists" folder.
 
 To quickly create a playlist, simply create a new file in the "Templates"
-folder, add a `title` expression, then add a `w/all-files` expression: that's
+folder and add some lines which specify which music files to include. That's
 it! Now just run the program as specified above.
 
 
-The S-expression Playlist Format
-================================
+The Nuit playlist format
+========================
 
-All playlists are composed of one or more S-expressions. The only required
-S-expression is `title`. The playlist can then optionally include files via
-the `include`, `w/playlist`, `w/folder`, or `w/all-files` expressions. Here's
-an example of a simple playlist:
+The simplest playlist is simply a bunch of strings, one on each line:
 
-    (title "foo")
+    Moonstone
+    Orchestral Balthasar Theme
+    Ruined World (Eternal Derelict)
+    Green Amnesia
+    Far Away Memories
+    Rotted Garden
 
-    (w/all-files
-      "bar"
-      "qux"
-      "corge")
+Strings are used to specify the filenames of music. Thus, each line in the
+above playlist specifies a single music file. Each string only needs to
+specify *part* of the filename: the string `foo` will match the file `foo`, or
+the file `foobar.mp3`, or the file `/path/to/05 - foo.mp3`, etc.
 
-The `title` element is used as the filename. So, the above playlist will have
-a filename of "foo.xspf". In addition, it's used when including other
-playlists, which will be discussed later.
+The playlist format is fairly strict about the strings:
 
-The `w/all-files` element is used to specify which files will be included into
-the playlist. The program uses sub-string matching, so the pattern `"bar"` can
-match "path/to/bar.mp3" as well as "path/to/foo - bar 3.wav"
+ * If a string matches two or more files, an error will be printed: you will
+   need to make the string more specific.
 
+ * If a file is matched by two or more strings, an error will be printed: you
+   will need to change the strings to match different files.
 
-There are three error conditions:
+ * If a string does not match any file, an error will be printed.
 
- 1. If a pattern matches two or more different files, an error will be
-    printed: you will then need to make the pattern more specific.
+---
 
- 2. If a file is matched by two or more different patterns, an error will be
-    printed: you will need to change the patterns to refer to different files.
+It is possible to specify more complicated things by using a list, which
+starts with `@` and is followed by a name and a string. Let's look at the
+`@title` list:
 
- 3. If a pattern does not match any file, an error will be printed.
+    @title Chrono Trigger
 
+    Moonstone
+    Orchestral Balthasar Theme
+    Ruined World (Eternal Derelict)
+    Green Amnesia
+    Far Away Memories
+    Rotted Garden
 
-Including other playlists
-=========================
+Here we've specified that the title of the playlist is "Chrono Trigger". By
+default, the playlist program uses the template's filename as the title, but
+you can use `@title` to override it.
 
-If you wish to combine multiple different playlists into a single one, you can
-use the `include` S-expression:
+---
 
-    (include "bar"
-             "qux")
+Another list is `@folder`:
 
-The above will find the playlists that have titles of `"bar"` and `"qux"` and
-will then include them into the current playlist. If you try to include a
-playlist that does not exist, an error will be printed.
+    @title Chrono Trigger
 
-The program will always correctly include files regardless of what order the
-templates are loaded in, and it is even capable of detecting infinite loops:
+    @folder Chrono Trigger
+      Moonstone
+      Orchestral Balthasar Theme
+      Ruined World (Eternal Derelict)
+      Green Amnesia
+      Far Away Memories
+      Rotted Garden
 
-    (title "foo")
-    (include "bar")
+The above playlist is just like the previous one except that the files must be
+inside the "Chrono Trigger" folder. This is useful if you have a string which
+matches two or more files, but the files are in different folders: you can use
+`@folder` to specify which file to match.
 
-    (title "bar")
-    (include "qux")
+---
 
-    (title "qux")
-    (include "foo")
+Another list is `@playlist`:
 
-The above three playlists will cause an error to be printed saying it detected
-an infinite loop.
+    @title Chrono Trigger
 
-It is also possible to *selectively* include only parts of another playlist by
-using the `w/playlist` form:
+    @folder Chrono Trigger
+      @playlist 5 Stars
+        Moonstone
+        Orchestral Balthasar Theme
+      @playlist 4 Stars
+        Ruined World (Eternal Derelict)
+      @playlist 3 Stars
+        Green Amnesia
+        Far Away Memories
+      @playlist 2 Stars
+        Rotted Garden
 
-    (w/playlist "foo"
-      "qux"
-      "corge")
+The above is just like the previous playlist except that *in addition* to
+adding the files to the current playlist, the files "Moonstone"
+and "Orchestral Balthasar Theme" are added to the playlist "5 Stars", the
+file "Ruined World (Eternal Derelict)" is added to the playlist "4 Stars",
+etc.
 
-    (w/playlist "bar"
-      "nou"
-      "yes")
+Because of the rule that files may not be matched by multiple strings, this is
+one way to add a file to multiple different playlists. I use this to give a
+rating to my files: as shown above, the "Chrono Trigger" files would be put
+into different "X Star" playlists depending on their rating. But there isn't
+any set semantic: you can use `@playlist` to place files into any playlist.
 
-The above will include the files `"qux"` and `"corge"` from the `"foo"`
-playlist, in addition to the `"nou"` and `"yes"` files from the `"bar"`
-playlist. Just like `w/all-files` it uses sub-string matching when adding
-files from a playlist.
+---
 
+The last list is `@include`:
 
-Limiting the scope of a pattern
-===============================
+    @title Chrono Trigger
 
-Because patterns use sub-string matching, sometimes they are more lenient than
-you would like. A simple way to be more strict is to include the file's path
-in the pattern:
+    @include Chrono Cross
 
-    (w/all-files
-      "path/to/foo"
-      "path/to/bar"
-      "path/to/qux"
-      "other/path/to/foo"
-      "other/path/to/bar"
-      "other/path/to/qux")
+    @folder Chrono Trigger
+      @playlist 5 Stars
+        Moonstone
+        Orchestral Balthasar Theme
+      @playlist 4 Stars
+        Ruined World (Eternal Derelict)
+      @playlist 3 Stars
+        Green Amnesia
+        Far Away Memories
+      @playlist 2 Stars
+        Rotted Garden
 
-But that is verbose and tedious. As an alternative, you can use the `w/folder`
-S-expression which is *exactly* like `w/all-files` except it only matches
-files contained (recursively) within the specified folder:
-
-    (w/folder "path/to"
-      "foo"
-      "bar"
-      "qux")
-
-    (w/folder "other/path/to"
-      "foo"
-      "bar"
-      "qux")
+`@include` will take all the files in another playlist and will put them into
+the current playlist. This is the second way to include a file in multiple
+different playlists.
 
 
 Examples
@@ -144,6 +154,6 @@ Examples
 I have included a few of my own playlists in the "examples" subdirectory.
 These demonstrate how to write playlists, and also clearly show how much
 shorter/easier to read/write the S-expression format is, compared to raw
-.xspf.
+.xspf
 
 This makes managing playlists a much more pleasant experience.

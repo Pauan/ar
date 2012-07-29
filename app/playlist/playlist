@@ -1,7 +1,6 @@
 #! /usr/bin/env arc
 
-(import ;boyer-moore
-        nuit/nuit-parse
+(import nuit/nuit-parse
         parse-script-args
         strings ; Only needed for urlencode-path
         sxml)
@@ -25,11 +24,7 @@
                     (quit))
                   ("-d" "--debug" ()
                     "Prints additional messages"
-                    (= debug? t))
-                  #|("-i" "--info" (t)
-                    "Displays information about a template; doesn't write any files"
-                    (= options!info t))|#
-                  ))
+                    (= debug? t))))
                   ;((in)  "Folder where you keep your templates")
                   ;((out) "Folder where the .xspf files are written to")
 
@@ -40,25 +35,7 @@
                      (or (dir-exists x)
                          (some (sym:downcase:extension x) exts))))))
 
-#|
-; TODO should probably be in strings.arc or utils.arc
-(def rtokens (str test)
-  (awith (s    (coerce str 'cons)
-          acc  (list nil))
-    (if (no s)
-          (map string:rev acc)
-        (caris s test)
-          (self cdr.s (cons nil acc))
-        (self cdr.s (cons (cons car.s car.acc) cdr.acc)))))
-
-(def split-path (x)
-  (rtokens x #\/))
-
-(def join-path (x)
-  (string:intersperse #\/ rev.x))|#
-
 (def process-pattern (x)
-  ;(boyer-moore-process x)
   (regexp (%.regexp-quote x)))
 
 (def process-folder (x)
@@ -77,57 +54,11 @@
                              patterns)
             "playlist" (w/playlists (cons cadr.x playlists)
                          (self cddr.x))
-            "folder"   (w/folders (cons (process-folder cadr.x) folders) ;(split-path )
+            "folder"   (w/folders (cons (process-folder cadr.x) folders)
                          (self cddr.x)))
-          (push (list x process-pattern.x folders rev.playlists) ;(map process-pattern split-path.x)
+          (push (list x process-pattern.x folders rev.playlists)
                 patterns))
       (self rest))))
-
-#|(def path-match (x y)
-  ;(prn car.x)
-  ;(prn car.y)
-  ;(prn)
-  (if (no x)
-        t
-      (no y)
-        nil
-      (and (%.regexp-match? car.x car.y)
-           (path-match cdr.x cdr.y))))
-
-(def folder-match (x y)
-  ;(prn x)
-  ;(prn y)
-  ;(prn)
-  (if (no x)
-        t
-      (no y)
-        nil
-      (or (and (is car.x car.y)
-               (folder-match cdr.x cdr.y))
-          (folder-match x cdr.y))))|#
-
-; (posmatch "foo" "fobarfo")
-#|(def posmatch (pat in)
-  (with (orig  (coerce pat 'cons)
-         in    (coerce in 'cons))
-    (awith (pat   orig
-            in    in
-            jump  in
-            i     0)
-      (if (no pat)
-            i
-          (no in)
-            nil
-          (or (and (is   car.pat car.in)
-                   (self cdr.pat cdr.in jump i))
-              (self orig cdr.jump cdr.jump (+ i 1)))))))|#
-
-
-; 19502   boyer-moore-search
-; 56148   my posmatch
-; 118529  strings.arc posmatch
-; 7214    re-match
-; 1995    %.regexp-match?
 
 ; http://en.wikipedia.org/wiki/Injective_function
 (def process-injective (patterns inputs)
@@ -139,11 +70,8 @@
           (let (pat proc folders playlists) x
             (withs (f  (trues (fn (file)
                                 (and (%.regexp-match? proc file)
-                                     ;(path-match proc file)
                                      (all [or (%.regexp-match? _ file) nil] folders)
-                                     file) ;folder-match
-                                  ;(join-path file)
-                                  )
+                                     file))
                               inputs)
                     c  car.f)
               (aif no.f
@@ -184,7 +112,7 @@
                   files.name))))
 
 (def encode-path (s)
-                    ;; TODO: relies on Nu specific changes to lib/strings.arc
+                    ; TODO relies on Nu specific changes to lib/strings.arc
   (string "file://" (urlencode-path:string cwd s)))
 
 (def ->sxml (title files)
@@ -209,7 +137,7 @@
             (normalize-file name value))))))
 
 (let time (msec)
-  (zap process-injective patterns dirall-ext.filetypes) ;(map split-path )
+  (zap process-injective patterns dirall-ext.filetypes)
   (debug "took " (- (msec) time) " msec to process all patterns"))
 
 ;=============================================================================

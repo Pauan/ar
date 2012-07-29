@@ -1,44 +1,44 @@
-(title "Final Fantasy")
+@playlist 5 Stars
+  Before and Behind
+  210-Painful Battle
+  Impressive Spell
+  Into the Fantasy
+  Battle of Hope
+  FFTA - Beyond the wasteland (orchestrated)
+  Final Fantasy Tactics A2 - Beyond The Wasteland
 
-(w/folder "FFTA2 OST"
-  "Before and Behind"
-  "Crisis Draws Near"
-  "Abyss"
-  "Premonition of Beginning"
-  "Painful Battle"
-  "Grief"
-  "The Confronted Ones"
-  "Bookmark"
-  "Peaceful Everyday Life"
-  "Comparison of Wisdom"
-  ;"Beyond the Wasteland"
-  "Eternity"
-  "Impressive Spell"
-  "Into the Fantasy"
-  "Mysterious Shop"
-  "Cid"
-  "Gathering Allies"
-  "Knowledge of the Adventurer"
-  "At The Bar"
-  "Companions that Surpassed Their Tribes"
-  "Words Put Together")
+@playlist 4 Stars
+  Abyss
+  Comparison of Wisdom
+  Eternity
+  Cid
+  Companions that Surpassed Their Tribes
+  Final Fantasy Tactics Trisection
+  VII Cosmo Canyon
+  Cosmo Canyon On Ocarina
 
-(w/folder "Final Fantasy Tactics Advance"
-  "The World Starting to Move"
-  ;"The World Starting to Move"
-  "Walking in Ivalice"
-  "At the Bar"
-  "Teach Me, Mont Blanc"
-  "Surpassing the Wall"
-  "Battle of Hope")
+@playlist 3 Stars
+  Bookmark
+  Peaceful Everyday Life
+  116-Mysterious Shop
+  31 - Mysterious Shop
+  At The Bar
+  Walking in Ivalice
+  At the Bar
+  Surpassing the Wall
+  Silence before the Storm Final Fantasy X Piano Arrangement
 
-(w/all-files
-  "Best VGM 750 - Final Fantasy VI - The Mines of Narshe"
-  "FFTA - Beyond the wasteland (orchestrated)"
-  "Final Fantasy Tactics A2 - Beyond The Wasteland"
-  ;"Best VGM 702 - Final Fantasy Tactics A2 - Companions That Surpassed Their Tribe"
-  "Silence before the Storm Final Fantasy X Piano Arrangement"
-  "Frontier Village Dali - Final Fantasy IX by Nobuo Uematsu (Fingerstyle Guitar)"
-  "Final Fantasy Tactics Trisection"
-  "Cosmo Canyon On Ocarina"
-  "VII Cosmo Canyon")
+@playlist 2 Stars
+  208-Grief
+  113-Gathering Allies
+  Knowledge of the Adventurer
+  Words Put Together
+  The World Starting to Move
+  Best VGM 750 - Final Fantasy VI - The Mines of Narshe
+
+@playlist 1 Stars
+  Crisis Draws Near
+  Premonition of Beginning
+  The Confronted Ones
+  Teach Me, Mont Blanc
+  Frontier Village Dali - Final Fantasy IX by Nobuo Uematsu (Fingerstyle Guitar)
