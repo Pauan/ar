@@ -11,7 +11,7 @@
 (= version      "2.0"
    options      (obj)
 
-   patterns     nil
+   strings      nil
    errors       nil
    files        (obj)
 
@@ -35,7 +35,7 @@
                      (or (dir-exists x)
                          (some (sym:downcase:extension x) exts))))))
 
-(def process-pattern (x)
+(def process-string (x)
   (regexp (%.regexp-quote x)))
 
 (def process-folder (x)
@@ -51,20 +51,20 @@
           (case car.x
             "title"    (= playlists (cons cadr.x cdr.playlists))
             "include"  (push (list* 'include (list car.playlists) cdr.x)
-                             patterns)
+                             strings)
             "playlist" (w/playlists (cons cadr.x playlists)
                          (self cddr.x))
             "folder"   (w/folders (cons (process-folder cadr.x) folders)
                          (self cddr.x)))
-          (push (list x process-pattern.x folders rev.playlists)
-                patterns))
+          (push (list x process-string.x folders rev.playlists)
+                strings))
       (self rest))))
 
 ; http://en.wikipedia.org/wiki/Injective_function
-(def process-injective (patterns inputs)
-  (debug "processing " len.patterns " patterns with " len.inputs " inputs")
+(def process-injective (strings files)
+  (debug "processing " len.strings " strings and " len.files " files")
   (let seen (obj)
-    (maplet x patterns
+    (maplet x strings
       (if (isa car.x 'sym)
           x
           (let (pat proc folders playlists) x
@@ -72,7 +72,7 @@
                                 (and (%.regexp-match? proc file)
                                      (all [or (%.regexp-match? _ file) nil] folders)
                                      file))
-                              inputs)
+                              files)
                     c  car.f)
               (aif no.f
                      (push (list "no-file" (list pat playlists))
@@ -81,14 +81,14 @@
                      (push (list "multi-file" (list pat playlists) f)
                            errors)
                    seen.c
-                     (push (list "multi-pattern" (list pat playlists) list.c it)
+                     (push (list "multi-string" (list pat playlists) list.c it)
                            errors))
               (each c f
                 (= seen.c (list pat playlists)))
               (list c playlists)))))))
 
-(def print-patterns args
-  (prn "  @patterns")
+(def print-strings args
+  (prn "  @strings")
   (each x (map car args)
     (prn "    " x)))
 
@@ -137,8 +137,8 @@
             (normalize-file name value))))))
 
 (let time (msec)
-  (zap process-injective patterns dirall-ext.filetypes)
-  (debug "took " (- (msec) time) " msec to process all patterns"))
+  (zap process-injective strings dirall-ext.filetypes)
+  (debug "took " (- (msec) time) " msec to process all strings"))
 
 ;=============================================================================
 ;  Errors
@@ -148,18 +148,18 @@
   (pr "@error ")
   (case n
     "no-file"
-      (do (prn "pattern did not match any file")
-          (print-patterns x)
+      (do (prn "string did not match any file")
+          (print-strings x)
           (print-playlists x))
     "multi-file"
-      (do (prn "pattern matched multiple files")
-          (print-patterns x)
+      (do (prn "string matched multiple files")
+          (print-strings x)
           (print-files file)
           (print-playlists x))
-    "multi-pattern"
-      (do (prn "file was matched by multiple patterns")
+    "multi-string"
+      (do (prn "file was matched by multiple strings")
           (print-files file)
-          (print-patterns x other)
+          (print-strings x other)
           (print-playlists x other))
     (err "invalid error message" n rest)))
 
@@ -171,7 +171,7 @@
 ;=============================================================================
 ;  Output
 ;=============================================================================
-(each (file playlists . rest) patterns
+(each (file playlists . rest) strings
   (each x playlists
     (push (cons file rest) files.x)))
 
