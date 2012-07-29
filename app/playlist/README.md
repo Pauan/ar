@@ -5,25 +5,25 @@ This is a program for generating .xspf playlists from [Nuit text](https://github
 
 It is assumed that all your playlist files will be kept in a single folder.
 
-For the sake of this README, I'll assume that folder is called "Templates".
+For the sake of this README, I'll assume that folder is called "nuit".
 
 Here is the basic usage of the program. First, you navigate to the folder
 which contains all your music, then you run the program with the path to the
-"Templates" folder as the first argument:
+"nuit" folder as the first argument:
 
-    cd path/to/Music
-    playlist path/to/Templates
+    cd path/to/music
+    playlist path/to/nuit
 
 If you give a second argument to the playlist program, it will store the
 .xspf files there instead of in the current directory:
 
-    playlist path/to/Templates path/to/Playlists
+    playlist path/to/nuit path/to/xspf
 
-This will cause the program to scan through the "Templates" folder and use
+This will cause the program to scan through the "nuit" folder and use
 the Nuit playlists defined within to generate .xspf equivalents.
-It will then store those .xspf playlists in the "Playlists" folder.
+It will then store those .xspf playlists in the "xspf" folder.
 
-To quickly create a playlist, simply create a new file in the "Templates"
+To quickly create a playlist, simply create a new file in the "nuit"
 folder and add some lines which specify the music files to include. That's
 it! Now just run the program as specified above.
 
@@ -71,7 +71,7 @@ starts with `@` and is followed by a name and a string. Let's look at the
     Rotted Garden
 
 Here we've specified that the title of the playlist is `Chrono Trigger`. By
-default, the playlist program uses the template's filename as the title, but
+default, the playlist program uses the playlist's filename as the title, but
 you can use `@title` to override it.
 
 ---
@@ -120,7 +120,7 @@ etc.
 Because of the rule that files may not be matched by multiple strings, this is
 one way to add a file to multiple different playlists. I use this to give a
 rating to my files: as shown above, the files would be put into different
-"X Star" playlists depending on their rating. But there isn't any set
+"X Stars" playlists depending on their rating. But there isn't any set
 semantic: you can use `@playlist` to place files into any playlist.
 
 ---
