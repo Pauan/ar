@@ -174,7 +174,7 @@ The ````` and ``"`` sigils use the following indent rules:
 
 * Within the string, ``\`` has the following meaning:
 
-  * ``\`` at the end of the line\ [#newline]_ inserts a literal newline (`U+000A`), except at the end of the string, in which case it does nothing::
+  * ``\`` at the end of the line\ [#newline]_ inserts a literal newline (``U+000A``), except at the end of the string, in which case it does nothing::
 
       Nuit  " foobar\
               quxcorge\
