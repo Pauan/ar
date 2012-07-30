@@ -38,8 +38,12 @@ The `@` sigil creates a list:
         Nuit  @foo bar
         JSON  ["foo", "bar"]
 
+###
+
         Nuit  @ foo bar
         JSON  ["foo bar"]
+
+###
 
         Nuit  @foo @bar qux
         JSON  ["foo", ["bar", "qux"]]
@@ -50,7 +54,7 @@ The `@` sigil creates a list:
               corge
         JSON  ["foo", "bar qux"]
 
-  4. If the second line *does* have a greater indent than the first line then it is added to the list:
+  4. If the second line *does* have a greater indent than the first line, then it is added to the list:
 
         Nuit  @foo bar qux
                 corge
@@ -81,10 +85,10 @@ The `#` sigil completely ignores the rest of the line[2] and everything that is 
 
     Nuit  #foo bar
             qux corge
-           nou yes
+           @nou yes
               maybe someday
-          not included
-    JSON  "not included"
+          @not included
+    JSON  ["not", included"]
 
 ---
 
@@ -92,20 +96,24 @@ The \` and `"` sigils use the following indent rules:
 
   1. It is invalid to have a non-whitespace[1] character immediately after the sigil.
 
-  2. The number "index" is the indentation + the sigil + 1 (one)
+  2. The "index" is the indentation + the sigil + 1 (one)
 
   3. Everything between "index" and the end of the line[2] is included in the sigil:
 
         Nuit  ` foobar
         JSON  "foobar"
 
+###
+
         Nuit  `  foobar
         JSON  " foobar"
 
-  4. If there aren't any non-whitespace[1] characters after the sigil then the first line is ignored:
+  4. If there isn't any non-whitespace[1] characters after the sigil then the first line is ignored:
 
         Nuit  `
         JSON  ""
+
+###
 
         Nuit  `
                 foobar
@@ -118,11 +126,15 @@ The \` and `"` sigils use the following indent rules:
                 nou yes
         JSON  "foobar\nquxcorge\nnou yes"
 
+###
+
         Nuit  `    foobar
                     quxcorge
                    nou
                  yes
         JSON  "   foobar\n    quxcorge\n   nou\n yes"
+
+###
 
         Nuit  `
                   foobar
@@ -183,6 +195,8 @@ The \` and `"` sigils use the following indent rules:
 
         Nuit  " foobar\n
         JSON  "foobar\n"
+
+###
 
         Nuit  " foobar\n
                 quxcorge
