@@ -2,7 +2,7 @@
 
 (= nuit-whitespace   (string "\u9\uB\uC\u85\uA0\u1680\u180E\u2000-\u200A"
                              "\u2028\u2029\u202F\u205F\u3000")
-   nuit-nonprinting  (string "\u0-\u8\uE-\u1F\u7F\u80-\u84\u86-\u9F\uFDD0-\uFDEF"
+   nuit-nonprinting  (string "\u0-\u8\uE-\u1F\u7F-\u84\u86-\u9F\uFDD0-\uFDEF"
                              "\uFEFF\uFFFE\uFFFF\U1FFFE\U1FFFF\U10FFFE\U10FFFF")
    nuit-end-of-line  "(?:\uD\uA|[\uD\uA]|$)"
    nuit-invalid      (string nuit-whitespace nuit-nonprinting))
@@ -95,17 +95,15 @@
 
 (def nuit-parse-string (sep (o f))
   (fn (next s lines index str)
-    (unless (or (is str "")
-                (is str.0 #\space))
-      (f-err "invalid character"
-             car.s lines (+ index 1)))
     (withs (index     (+ index 1)
-            str       (if (is str "")
-                          str
-                          (cut str 1))
-            (s? str)  (if (is str "")  (list nil str)
-                          f            (f sep s lines index str)
-                                       (list sep str)))
+            (s? str)  (if (is str "")
+                            (list nil str)
+                          (is str.0 #\space)
+                            (let str (cut str 1)
+                              (if f (f sep s lines index str)
+                                    (list sep str)))
+                          (f-err (string "expected space or newline but got " str.0)
+                                 car.s lines index)))
       (nuit-while1 cdr.s (+ lines 1)
         (fn (self s lines i str)
           (if (is str "")
@@ -130,15 +128,19 @@
       (alet i i
         (let (h end) (cdr:re-match "([0-9a-fA-F]*)(.?)" str)
           (let i (+ i len.h 1)
-            (case end
-              " " (cons (nuit-hex->char h)
-                        (self i))
-              ")" (cons (nuit-hex->char h)
-                        (next i))
-              ""  (f-err "missing space or )" car.s lines (+ i 1))
-                  (f-err (string "invalid hexadecimal " end)
-                         car.s lines (+ i 1))))))
-      (f-err "missing (" car.s lines (+ i 1))))
+            (if (and (is end " ")
+                     (isnt h ""))
+                  (cons nuit-hex->char.h self.i)
+                (and (is end ")")
+                     (isnt h ""))
+                  (cons nuit-hex->char.h next.i)
+                (is end "")
+                  (f-err "expected space or ) but got newline" car.s lines (+ i 1))
+                (f-err (string "expected hexadecimal but got "
+                               (if (is end " ") "space" end))
+                       car.s lines (+ i 1))))))
+      (f-err (string "expected ( but got " (or peekc.str "newline"))
+             car.s lines (+ i 1))))
 
 (def nuit-parse-escape (sep s lines i str)
   (withs (str  (instring str)
@@ -160,7 +162,7 @@
                            (list* start #\newline self.i)
                          (is end "u")
                            (cons start (nuit-parse-unicode self s lines i str))
-                         (f-err (string "invalid escape " end)
+                         (f-err (string "expected any of [newline \\ s n u] but got " end)
                                 car.s lines i))))))
     (list sep string.x)))
 
@@ -202,7 +204,9 @@
   (let s (nuit-normalize (if (isa s 'string)
                              (instring s)
                              s))
-    (nuit-while s 1
-      (nuit-parse-index is (nuit-find-indent 0 s)
-        (fn (self s lines i str)
-          (f-err "invalid indentation" car.s lines i))))))
+    (let index (nuit-find-indent 0 s)
+      (nuit-while s 1
+        (nuit-parse-index is index
+          (fn (self s lines i str)
+            (f-err (string "expected an indent of " index " but got " i)
+                   car.s lines i)))))))

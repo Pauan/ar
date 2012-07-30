@@ -23,7 +23,7 @@
   ^")
   (nuit-parse "\tfoobar"))
 
-(assert (err "invalid indentation
+(assert (err "expected an indent of 0 but got 1
    yes  (line 4, column 1)
   ^")
   (nuit-parse "
@@ -32,7 +32,7 @@
  yes
 "))
 
-(assert (err "invalid indentation
+(assert (err "expected an indent of 1 but got 0
   @foobar  (line 6, column 1)
   ^")
   (nuit-parse "
@@ -45,7 +45,7 @@
   yes
 "))
 
-(assert (err "invalid indentation
+(assert (err "expected an indent of 2 but got 3
      @foobar  (line 6, column 3)
     ^")
   (nuit-parse "
@@ -58,7 +58,7 @@
     yes
 "))
 
-(assert (err "invalid indentation
+(assert (err "expected an indent of 0 but got 1
    questionable  (line 4, column 1)
   ^")
   (nuit-parse "
@@ -66,7 +66,7 @@
     yes maybe no
  questionable"))
 
-(assert (err "invalid escape b
+(assert (err "expected any of [newline \\ s n u] but got b
   \" foo\\bar  (line 2, column 7)
         ^")
   (nuit-parse "
@@ -76,7 +76,7 @@
   maybe sometimes
 "))
 
-(assert (err "missing (
+(assert (err "expected ( but got A
   \" foo\\uAB01ar  (line 2, column 8)
          ^")
   (nuit-parse "
@@ -86,7 +86,27 @@
   maybe sometimes
 "))
 
-(assert (err "missing space or )
+(assert (err "expected ( but got newline
+  \" foo\\u  (line 2, column 8)
+         ^")
+  (nuit-parse "
+\" foo\\u
+  quxcorge
+  nou yes
+  maybe sometimes
+"))
+
+(assert (err "expected hexadecimal but got )
+  \" foo\\u()  (line 2, column 9)
+          ^")
+  (nuit-parse "
+\" foo\\u()
+  quxcorge
+  nou yes
+  maybe sometimes
+"))
+
+(assert (err "expected space or ) but got newline
   \" foo\\u(AB01 FA1  (line 2, column 17)
                   ^")
   (nuit-parse "
@@ -96,7 +116,7 @@
   maybe sometimes
 "))
 
-(assert (err "invalid hexadecimal U
+(assert (err "expected hexadecimal but got U
   \" foo\\u(AB01 FA1U  (line 2, column 17)
                   ^")
   (nuit-parse "
@@ -106,7 +126,7 @@
   maybe sometimes
 "))
 
-(assert (err "invalid hexadecimal U
+(assert (err "expected hexadecimal but got U
   \" foo\\u(AB01 U)ar  (line 2, column 14)
                ^")
   (nuit-parse "
@@ -139,14 +159,14 @@
   (nuit-parse "
 \" foo\\u(DFFF)bar"))
 
-(assert (err "invalid character
+(assert (err "expected space or newline but got f
   `foobar  (line 2, column 2)
    ^")
   (nuit-parse "
 `foobar
 "))
 
-(assert (err "invalid indentation
+(assert (err "expected an indent of 0 but got 1
    foobar  (line 3, column 1)
   ^")
   (nuit-parse "
@@ -157,7 +177,7 @@
  maybe sometimes
 "))
 
-(assert (err "invalid indentation
+(assert (err "expected an indent of 0 but got 5
        foobar  (line 4, column 5)
       ^")
   (nuit-parse "
@@ -169,10 +189,30 @@
      maybe sometimes
 "))
 
-(assert (err "invalid escape b
+(assert (err "expected any of [newline \\ s n u] but got b
   \" foobar\\b  (line 1, column 10)
            ^")
   (nuit-parse "\" foobar\\b"))
+
+(assert (err "expected hexadecimal but got space
+    qux\\u(   20      20AC   )corge  (line 3, column 9)
+          ^")
+  (nuit-parse "
+\" foo\\\\bar
+  qux\\u(   20      20AC   )corge
+  nou yes
+  maybe sometimes
+"))
+
+(assert (err "expected hexadecimal but got space
+    qux\\u(20  20AC)corge  (line 3, column 12)
+             ^")
+  (nuit-parse "
+\" foo\\\\bar
+  qux\\u(20  20AC)corge
+  nou yes
+  maybe sometimes
+"))
 
 
 

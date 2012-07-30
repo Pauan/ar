@@ -277,8 +277,7 @@ The following Unicode code points are *always* invalid:
     # non-printing
     U+0000 - U+0008
     U+000E - U+001F
-    U+007F
-    U+0080 - U+0084
+    U+007F - U+0084
     U+0086 - U+009F
     U+FDD0 - U+FDEF
     U+FFFE
@@ -312,7 +311,7 @@ All other Unicode characters may be used freely.
 
 [2]: End of line is defined as either `EOF`, `U+000A` (newline), `U+000D` (carriage return), or the combination of `U+000D` and `U+000A`. Parsers must convert all end of lines (excluding `EOF`) within strings to `U+000A`
 
-[3]: A Unicode code point escape starts with `\u(`, contains one or more strings (which must contain only the hexidecimal characters `0123456789abcdefABCDEF`) separated by whitespace[1], and ends with `)`
+[3]: A Unicode code point escape starts with `\u(`, contains one or more strings (which must contain only the hexidecimal characters `0123456789abcdefABCDEF`) separated by a single space[1], and ends with `)`
 
 Each string is the hexadecimal value of a Unicode code point. As an example, the string `"fob` is the same as `"\u(66)\u(6F)\u(62)` which is the same as `"\u(66 6F 62)`. Because they are *code points* and not bytes, `\u(1D11E)` represents the Unicode character `𝄞`
 
