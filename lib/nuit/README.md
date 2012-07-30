@@ -30,23 +30,27 @@ The `@` sigil creates a list:
 
   1. If there's any non-whitespace[1] immediately after the `@` it is added to the list as a string:
 
-        Nuit  @foo
-        JSON  ["foo"]
+<pre>
+Nuit  @foo
+JSON  ["foo"]
+</pre>
 
   2. After the first string (if any), if there's any whitespace[1] followed by non-whitespace[1], it is treated as a new line and added to the list:
 
-        Nuit  @foo bar
-        JSON  ["foo", "bar"]
+<pre><code>
+Nuit  @foo bar
+JSON  ["foo", "bar"]
+</code></pre>
 
-###
+<pre><code>
+Nuit  @ foo bar
+JSON  ["foo bar"]
+</code></pre>
 
-        Nuit  @ foo bar
-        JSON  ["foo bar"]
-
-###
-
-        Nuit  @foo @bar qux
-        JSON  ["foo", ["bar", "qux"]]
+<pre><code>
+Nuit  @foo @bar qux
+JSON  ["foo", ["bar", "qux"]]
+</code></pre>
 
   3. Look at the second line and see if it has a greater indent than the first line. If not, then it is not added to the list:
 
