@@ -30,25 +30,21 @@ The `@` sigil creates a list:
 
   1. If there's any non-whitespace[1] immediately after the `@` it is added to the list as a string:
 
-<pre>
-Nuit  @foo
+     <pre>Nuit  @foo
 JSON  ["foo"]
 </pre>
 
   2. After the first string (if any), if there's any whitespace[1] followed by non-whitespace[1], it is treated as a new line and added to the list:
 
-<pre><code>
-Nuit  @foo bar
+     <pre><code>Nuit  @foo bar
 JSON  ["foo", "bar"]
 </code></pre>
 
-<pre><code>
-Nuit  @ foo bar
+     <pre><code>Nuit  @ foo bar
 JSON  ["foo bar"]
 </code></pre>
 
-<pre><code>
-Nuit  @foo @bar qux
+     <pre><code>Nuit  @foo @bar qux
 JSON  ["foo", ["bar", "qux"]]
 </code></pre>
 
@@ -96,7 +92,7 @@ The `#` sigil completely ignores the rest of the line[2] and everything that is 
 
 ---
 
-The \` and `"` sigils use the following indent rules:
+The <code>`</code> and `"` sigils use the following indent rules:
 
   1. It is invalid to have a non-whitespace[1] character immediately after the sigil.
 
@@ -156,9 +152,9 @@ The \` and `"` sigils use the following indent rules:
                 yes
         JSON  "foobar\nquxcorge\n\nnou\n\nyes"
 
-\` creates a string that contains everything that is included by the above indent rules.
+<code>`</code> creates a string that contains everything that is included by the above indent rules.
 
-`"` is exactly like \` except:
+`"` is exactly like <code>`</code> except:
 
   * Single newlines[2] are converted to a single space[1]:
 
