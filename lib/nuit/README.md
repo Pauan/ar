@@ -132,13 +132,13 @@ JSON  <code>"  foobar\nquxcorge\nnou yes"</code></pre>
 
   6. Empty lines are also included, regardless of their indentation:
 
-     <pre>Nuit  <code>\` foobar\
-             quxcorge\
+     <pre>Nuit  <code>\` foobar
+             quxcorge
 \
-             nou\
+             nou
 \
              yes</code>
-     JSON  <code>"foobar\nquxcorge\n\nnou\n\nyes"</code></pre>
+JSON  <code>"foobar\nquxcorge\n\nnou\n\nyes"</code></pre>
 
 <code>`</code> creates a string that contains everything that is included by the above indent rules.
 
