@@ -138,7 +138,7 @@ JSON  <code>"  foobar\nquxcorge\nnou yes"</code></pre>
              nou
 
              yes</code>
-JSON  <code>"foobar\nquxcorge\n\nnou\n\nyes"</code></pre>
+     JSON  <code>"foobar\nquxcorge\n\nnou\n\nyes"</code></pre>
 
 <code>`</code> creates a string that contains everything that is included by the above indent rules.
 
@@ -166,13 +166,13 @@ JSON  <code>"foobar\n\nquxcorge\n\nnou"</code></pre>
 
      <pre>Nuit  <code>" foobar\
              quxcorge\
-             nou\</code>
+             nou\\</code>
 JSON  <code>"foobar\nquxcorge\nnou"</code></pre>
 
-     `\\` inserts a literal `\` (`U+005C`):
+     `\\` inserts a literal backslash (`U+005C`):
 
-     <pre>Nuit  <code>" foo\\bar</code>
-JSON  <code>"foo\\bar"</code></pre>
+     <pre>Nuit  <code>" foo\\\\bar</code>
+JSON  <code>"foo\\\\bar"</code></pre>
 
      `\s` inserts a literal space (`U+0020`):
 
