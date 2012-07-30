@@ -134,9 +134,9 @@ JSON  <code>"  foobar\nquxcorge\nnou yes"</code></pre>
 
      <pre>Nuit  <code>\` foobar
              quxcorge
-\
+
              nou
-\
+
              yes</code>
 JSON  <code>"foobar\nquxcorge\n\nnou\n\nyes"</code></pre>
 
