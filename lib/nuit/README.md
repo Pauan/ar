@@ -73,7 +73,7 @@ The `@` sigil creates a list:
                 @maybe
                   @
                   someday
-        JSON  ["foo", ["bar", "qux", "yes nou"] "corge" ["maybe", [], "someday"]]
+        JSON  ["foo", ["bar", "qux", "yes nou"], "corge", ["maybe", [], "someday"]]
 
 ---
 
@@ -92,9 +92,9 @@ The \` and `"` sigils use the following indent rules:
 
   1. It is invalid to have a non-whitespace[1] character immediately after the sigil.
 
-  2. The number `index` is the indentation + the sigil + 1 (one)
+  2. The number "index" is the indentation + the sigil + 1 (one)
 
-  3. Everything between `index` and the end of the line[2] is included in the sigil:
+  3. Everything between "index" and the end of the line[2] is included in the sigil:
 
         Nuit  ` foobar
         JSON  "foobar"
@@ -111,7 +111,7 @@ The \` and `"` sigils use the following indent rules:
                 foobar
         JSON  "foobar"
 
-  5. Every following line that has an indent that is greater than or equal to `index` is included in the sigil:
+  5. Every following line that has an indent that is greater than or equal to "index" is included in the sigil:
 
         Nuit  ` foobar
                 quxcorge
@@ -169,7 +169,7 @@ The \` and `"` sigils use the following indent rules:
                 nou\
         JSON  "foobar\nquxcorge\nnou"
 
-     `\\` inserts a literal `\`:
+     `\\` inserts a literal `\` (`U+005C`):
 
         Nuit  " foo\\bar
         JSON  "foo\\bar"
@@ -299,7 +299,7 @@ The following Unicode code points are **only** valid when using UTF-16 encoding:
 
     U+D800 - U+DFFF
 
-They are **always** invalid within Unicode code point escapes[3] even in UTF-16 encoding
+They are **always** invalid within Unicode code point escapes[3] even in UTF-16 encoding.
 
 ---
 
@@ -311,11 +311,11 @@ All other Unicode characters may be used freely.
 
 [2]: End of line is defined as either `EOF`, `U+000A` (newline), `U+000D` (carriage return), or the combination of `U+000D` and `U+000A`. Parsers must convert all end of lines (excluding `EOF`) within strings to `U+000A`
 
-[3]: A Unicode code point escape starts with `\u(`, contains one or more strings (which must contain only the hexidecimal characters `0123456789abcdefABCDEF`) separated by a single space[1], and ends with `)`
+[3]: A Unicode code point escape starts with `\u(`, contains one or more strings (which must contain only the hexadecimal characters `0123456789abcdefABCDEF`) separated by a single space[1], and ends with `)`
 
-Each string is the hexadecimal value of a Unicode code point. As an example, the string `"fob` is the same as `"\u(66)\u(6F)\u(62)` which is the same as `"\u(66 6F 62)`. Because they are *code points* and not bytes, `\u(1D11E)` represents the Unicode character `𝄞`
+Each string is the hexadecimal value of a Unicode code point. As an example, the string `" fob` is the same as `" \u(66)\u(6F)\u(62)` which is the same as `" \u(66 6F 62)`. Because they are *code points* and not bytes, `\u(1D11E)` represents the Unicode character `𝄞`
 
-Unicode code point escapes are necessary to include invalid characters (listed above). They are also useful in the situation where you don't have an easy way to insert a Unicode character directly, but you do know its code point, e.g. you can represent the string `foo€bar` as `"foo\u(20AC)bar`
+Unicode code point escapes are necessary to include invalid characters (listed above). They are also useful in the situation where you don't have an easy way to insert a Unicode character directly, but you do know its code point, e.g. you can represent the string `foo€bar` as `" foo\u(20AC)bar`
 
 
 Comparison
