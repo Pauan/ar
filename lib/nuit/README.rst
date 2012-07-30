@@ -79,7 +79,7 @@ The ``@`` sigil creates a list:
                someday
      JSON  ["foo", ["bar", "qux", "yes nou"], "corge", ["maybe", [], "someday"]]
 
----
+----
 
 The ``#`` sigil completely ignores the rest of the line [#newline]_ and everything that is indented further than it::
 
@@ -90,7 +90,7 @@ The ``#`` sigil completely ignores the rest of the line [#newline]_ and everythi
         @not included
   JSON  ["not", included"]
 
----
+----
 
 The ````` and ``"`` sigils use the following indent rules:
 
@@ -209,17 +209,17 @@ The ````` and ``"`` sigils use the following indent rules:
 
   Any other combination of ``\`` is invalid.
 
----
+----
 
 If a line does not start with any of the above sigils it is treated as a string that continues until the end of the line [#newline]_.
 
----
+----
 
 Whitespace [#whitespace]_ is *completely* ignored at the end of the line [#newline]_, even within strings.
 
 Except within strings, empty lines are *completely* ignored. They don't even count for indentation.
 
----
+----
 
 There is an implicit list that contains the entire Nuit text. Which means this::
 
@@ -255,7 +255,7 @@ Is the same as this JSON::
 
 The implicit list has the same rules as an explicit list, such as: all sub-expressions must have the same indent, empty lines are ignored, etc.
 
----
+----
 
 That's it! The only thing left to describe is some Unicode stuff.
 
@@ -269,7 +269,7 @@ It is *very highly* recommended to support at least UTF-8, but any Unicode encod
 
 It is also *very highly* recommended to use UTF-8 as the default encoding when serializing.
 
----
+----
 
 The following Unicode code points are *always* invalid::
 
@@ -305,11 +305,11 @@ The following Unicode code points are *always* invalid::
 
 To represent them, you must use a Unicode code point escape [#unicode]_
 
----
+----
 
 The Unicode byte order mark ``U+FEFF`` is invalid everywhere except as the first character in the stream. It is used for encoding and is an implementation detail. Thus, it has no effect on indentation, is not included in strings, etc.
 
----
+----
 
 The following Unicode code points are **only** valid when using UTF-16 encoding::
 
@@ -317,11 +317,11 @@ The following Unicode code points are **only** valid when using UTF-16 encoding:
 
 They are **always** invalid within Unicode code point escapes [#unicode]_ even in UTF-16 encoding.
 
----
+----
 
 All other Unicode characters may be used freely.
 
----
+----
 
 .. [#whitespace]
    Whitespace is defined as the Unicode code point ``U+0020`` (space)
@@ -351,7 +351,7 @@ JSON, however, provides native support for unordered dictionaries, numbers, bool
 
 In practice this isn't a big deal because JSON was originally designed to communicate between a server and JavaScript. Thus, using JavaScript's native notation for objects, arrays, numbers, booleans, and null, was a practical decision.
 
----
+----
 
 JSON does not have any support for comments. Nuit, however, supports both single and multi-line comments. It is also much more concise than JSON, which makes it easier to read and write. These two things combined make Nuit much better for configuration files.
 
@@ -367,7 +367,7 @@ When it comes to raw features, YAML is clearly *drastically* better than XML, JS
 My recommendation is to use Nuit if it's good enough for your needs (because of its simplicity), but if Nuit starts to get too restrictive, switch to YAML.
 
 XML
----
+----
 
 Ah, yes, XML... the only real compliment I can give is that it works passably when writing a document that has lots of text in it, such as a web page. Unfortunately, XML is terrible for *everything else*.
 
@@ -456,7 +456,7 @@ XML (807 bytes)::
 
   <playlists><playlist name="5 Stars"><file album="Chrono Trigger" author="Yasunori Mitsuda">05 - Memories of Green</file><file album="Chrono Trigger" author="Yasunori Mitsuda">51 - Time Circuits</file><file album="Chrono Trigger" author="Yasunori Mitsuda">55 - Undersea Palace</file></playlist><playlist name="4 Stars"><file album="Chrono Trigger" author="Yasunori Mitsuda">47 - Battle with Magus</file><file album="Chrono Trigger" author="Yasunori Mitsuda">53 - Sara's (Schala's) Theme</file><file album="Chrono Trigger" author="Yasunori Mitsuda">64 - To Far Away Times</file></playlist><playlist name="3 Stars"><file album="Chrono Trigger" author="Yasunori Mitsuda">11 - Secret of the Forest</file><file album="Chrono Trigger" author="Yasunori Mitsuda">36 - The Brink of Time</file></playlist></playlists>
 
----
+----
 
 If you're after the smallest format, inline YAML wins by a *very* huge margin. Nuit and JSON are quite close to eachother. Indented YAML and XML are the worst of the bunch, by a fairly significant margin.
 
