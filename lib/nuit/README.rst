@@ -28,12 +28,12 @@ There are special characters that can only appear at the start of a line. They a
 
 The ``@`` sigil creates a list:
 
-1. If there's any non-whitespace [#whitespace]_ immediately after the ``@`` it is added to the list as a string::
+1. If there's any non-whitespace\ [#whitespace]_ immediately after the ``@`` it is added to the list as a string::
 
      Nuit  @foo
      JSON  ["foo"]
 
-2. After the first string (if any), if there's any whitespace [#whitespace]_ followed by non-whitespace [#whitespace]_, it is treated as a new line and added to the list::
+2. After the first string (if any), if there's any whitespace\ [#whitespace]_ followed by non-whitespace\ [#whitespace]_, it is treated as a new line and added to the list::
 
      Nuit  @foo bar
      JSON  ["foo", "bar"]
@@ -81,7 +81,7 @@ The ``@`` sigil creates a list:
 
 ----
 
-The ``#`` sigil completely ignores the rest of the line [#newline]_ and everything that is indented further than it::
+The ``#`` sigil completely ignores the rest of the line\ [#newline]_ and everything that is indented further than it::
 
   Nuit  #foo bar
           qux corge
@@ -94,11 +94,11 @@ The ``#`` sigil completely ignores the rest of the line [#newline]_ and everythi
 
 The ````` and ``"`` sigils use the following indent rules:
 
-1. It is invalid to have a non-whitespace [#whitespace]_ character immediately after the sigil.
+1. It is invalid to have a non-whitespace\ [#whitespace]_ character immediately after the sigil.
 
 2. The "index" is the indentation + the sigil + 1 (one).
 
-3. Everything between "index" and the end of the line [#newline]_ is included in the sigil::
+3. Everything between "index" and the end of the line\ [#newline]_ is included in the sigil::
 
      Nuit  ` foobar
      JSON  "foobar"
@@ -108,7 +108,7 @@ The ````` and ``"`` sigils use the following indent rules:
      Nuit  `  foobar
      JSON  " foobar"
 
-4. If there isn't any non-whitespace [#whitespace]_ characters after the sigil then the first line is ignored::
+4. If there isn't any non-whitespace\ [#whitespace]_ characters after the sigil then the first line is ignored::
 
      Nuit  `
      JSON  ""
@@ -156,14 +156,14 @@ The ````` and ``"`` sigils use the following indent rules:
 
 ``"`` is exactly like ````` except:
 
-* Single newlines [#newline]_ are converted to a single space [#whitespace]_::
+* Single newlines\ [#newline]_ are converted to a single space\ [#whitespace]_::
 
     Nuit  " foobar
             quxcorge
             nou
     JSON  "foobar quxcorge nou"
 
-* Two or more newlines [#newline]_ are left unchanged::
+* Two or more newlines\ [#newline]_ are left unchanged::
 
     Nuit  " foobar
 
@@ -174,7 +174,7 @@ The ````` and ``"`` sigils use the following indent rules:
 
 * Within the string, ``\`` has the following meaning:
 
-  * ``\`` at the end of the line [#newline]_ inserts a literal newline, except at the end of the string, in which case it does nothing::
+  * ``\`` at the end of the line\ [#newline]_ inserts a literal newline, except at the end of the string, in which case it does nothing::
 
       Nuit  " foobar\
               quxcorge\
@@ -202,7 +202,7 @@ The ````` and ``"`` sigils use the following indent rules:
               quxcorge
       JSON  "foobar\n quxcorge"
 
-  * ``\u`` starts a Unicode code point escape [#unicode]_::
+  * ``\u`` starts a Unicode code point escape\ [#unicode]_::
 
       Nuit  " foo\u(20 20AC)bar
       JSON  "foo\u0020\u20ACbar"
@@ -211,11 +211,11 @@ The ````` and ``"`` sigils use the following indent rules:
 
 ----
 
-If a line does not start with any of the above sigils it is treated as a string that continues until the end of the line [#newline]_.
+If a line does not start with any of the above sigils it is treated as a string that continues until the end of the line\ [#newline]_.
 
 ----
 
-Whitespace [#whitespace]_ is *completely* ignored at the end of the line [#newline]_, even within strings.
+Whitespace\ [#whitespace]_ is *completely* ignored at the end of the line\ [#newline]_, even within strings.
 
 Except within strings, empty lines are *completely* ignored. They don't even count for indentation.
 
@@ -303,7 +303,7 @@ The following Unicode code points are *always* invalid::
   U+10FFFE
   U+10FFFF
 
-To represent them, you must use a Unicode code point escape [#unicode]_
+To represent them, you must use a Unicode code point escape\ [#unicode]_
 
 ----
 
@@ -315,7 +315,7 @@ The following Unicode code points are **only** valid when using UTF-16 encoding:
 
   U+D800 - U+DFFF
 
-They are **always** invalid within Unicode code point escapes [#unicode]_ even in UTF-16 encoding.
+They are **always** invalid within Unicode code point escapes\ [#unicode]_ even in UTF-16 encoding.
 
 ----
 
@@ -330,7 +330,7 @@ All other Unicode characters may be used freely.
    End of line is defined as either ``EOF``, ``U+000A`` (newline), ``U+000D`` (carriage return), or ``U+000D`` followed by ``U+000A``. Parsers must convert all end of lines (excluding ``EOF``) within strings to ``U+000A``
 
 .. [#unicode]:
-   A Unicode code point escape starts with ``\u(``, contains one or more strings (which must contain only the hexadecimal characters ``0123456789abcdefABCDEF``) separated by a single space [#whitespace]_, and ends with ``)``
+   A Unicode code point escape starts with ``\u(``, contains one or more strings (which must contain only the hexadecimal characters ``0123456789abcdefABCDEF``) separated by a single space\ [#whitespace]_, and ends with ``)``
 
    Each string is the hexadecimal value of a Unicode code point. As an example, the string ``" fob`` is the same as ``" \u(66)\u(6F)\u(62)`` which is the same as ``" \u(66 6F 62)``. Because they are *code points* and not bytes, ``\u(1D11E)`` represents the Unicode character ``𝄞``
 
