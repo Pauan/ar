@@ -10,7 +10,7 @@ Goals
  3. Extremely concise and easy for humans to read and write
  4. Simple enough to be easily understood by a computer
 
-Nuit is general-purpose. It is intended to completely replace INI and XML configuration files.
+Nuit is general-purpose. It is intended to completely replace INI and XML in most situations.
 
 Nuit is *not* intended to have lots of features. For that, I recommend using YAML.
 
