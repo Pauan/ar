@@ -77,7 +77,7 @@ The `@` sigil creates a list:
 
 ---
 
-The `#` sigil completely ignores everything that is indented further than it:
+The `#` sigil completely ignores the rest of the line[2] and everything that is indented further than it:
 
     Nuit  #foo bar
             qux corge
@@ -92,7 +92,7 @@ The \` and `"` sigils use the following indent rules:
 
   1. It is invalid to have a non-whitespace[1] character immediately after the sigil.
 
-  2. The `index` is the indentation + the sigil + 1 (one)
+  2. The number `index` is the indentation + the sigil + 1 (one)
 
   3. Everything between `index` and the end of the line[2] is included in the sigil:
 
