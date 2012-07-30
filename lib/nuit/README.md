@@ -47,32 +47,32 @@ JSON  <code>["foo", ["bar", "qux"]]</code></pre>
   3. Look at the second line and see if it has a greater indent than the first line. If not, then it is not added to the list:
 
      <pre>Nuit  <code>@foo bar qux
-          corge</code>
+           corge</code>
 JSON  <code>["foo", "bar qux"]</code></pre>
 
   4. If the second line *does* have a greater indent than the first line, then it is added to the list:
 
      <pre>Nuit  <code>@foo bar qux
-            corge</code>
+             corge</code>
 JSON  <code>["foo", "bar qux", "corge"]</code></pre>
 
   5. Every line after the second line that has the **same indent** as the second line is added to the list:
 
      <pre>Nuit  <code>@foo bar qux
-            corge
-            maybe
-            someday
-              not included</code>
+             corge
+             maybe
+             someday
+               not included</code>
 JSON  <code>["foo", "bar qux", "corge", "maybe", "someday"]</code></pre>
 
   6. The above rules are recursive, which allows lists to nest within lists:
 
      <pre>Nuit  <code>@foo @bar qux
-                 yes nou
-            corge
-            @maybe
-              @
-              someday</code>
+                  yes nou
+             corge
+             @maybe
+               @
+               someday</code>
 JSON  <code>["foo", ["bar", "qux", "yes nou"], "corge", ["maybe", [], "someday"]]</code></pre>
 
 ---
@@ -80,10 +80,10 @@ JSON  <code>["foo", ["bar", "qux", "yes nou"], "corge", ["maybe", [], "someday"]
 The `#` sigil completely ignores the rest of the line[2] and everything that is indented further than it:
 
 <pre>Nuit  <code>#foo bar
-        qux corge
-       @nou yes
-          maybe someday
-      @not included</code>
+         qux corge
+        @nou yes
+           maybe someday
+       @not included</code>
 JSON  <code>["not", included"]</code></pre>
 
 ---
@@ -92,7 +92,7 @@ The <code>\`</code> and `"` sigils use the following indent rules:
 
   1. It is invalid to have a non-whitespace[1] character immediately after the sigil.
 
-  2. The "index" is the indentation + the sigil + 1 (one)
+  2. The "index" is the indentation + the sigil + 1 (one).
 
   3. Everything between "index" and the end of the line[2] is included in the sigil:
 
@@ -114,30 +114,30 @@ JSON  <code>"foobar"</code></pre>
   5. Every following line that has an indent that is greater than or equal to "index" is included in the sigil:
 
      <pre>Nuit  <code>` foobar
-            quxcorge
-            nou yes</code>
+             quxcorge
+             nou yes</code>
 JSON  <code>"foobar\nquxcorge\nnou yes"</code></pre>
 
      <pre>Nuit  <code>`    foobar
-                quxcorge
-               nou
-             yes</code>
+                 quxcorge
+                nou
+              yes</code>
 JSON  <code>"   foobar\n    quxcorge\n   nou\n yes"</code></pre>
 
      <pre>Nuit  <code>`
-              foobar
-            quxcorge
-            nou yes</code>
+               foobar
+             quxcorge
+             nou yes</code>
 JSON  <code>"  foobar\nquxcorge\nnou yes"</code></pre>
 
   6. Empty lines are also included, regardless of their indentation:
 
      <pre>Nuit  <code>` foobar
-            quxcorge
+             quxcorge
 
-            nou
+             nou
 
-            yes</code>
+             yes</code>
 JSON  <code>"foobar\nquxcorge\n\nnou\n\nyes"</code></pre>
 
 <code>`</code> creates a string that contains everything that is included by the above indent rules.
@@ -147,17 +147,17 @@ JSON  <code>"foobar\nquxcorge\n\nnou\n\nyes"</code></pre>
   * Single newlines[2] are converted to a single space[1]:
 
     <pre>Nuit  <code>" foobar
-            quxcorge
-            nou</code>
+             quxcorge
+             nou</code>
 JSON  <code>"foobar quxcorge nou"</code></pre>
 
   * Two or more newlines[2] are left unchanged:
 
     <pre>Nuit  <code>" foobar
 
-            quxcorge
+             quxcorge
 
-            nou</code>
+             nou</code>
 JSON  <code>"foobar\n\nquxcorge\n\nnou"</code></pre>
 
   * Within the string, `\` has the following meaning:
@@ -165,8 +165,8 @@ JSON  <code>"foobar\n\nquxcorge\n\nnou"</code></pre>
      `\` at the end of the line[2] inserts a literal newline, except at the end of the string, in which case it does nothing:
 
      <pre>Nuit  <code>" foobar\
-            quxcorge\
-            nou\</code>
+             quxcorge\
+             nou\</code>
 JSON  <code>"foobar\nquxcorge\nnou"</code></pre>
 
      `\\` inserts a literal `\` (`U+005C`):
@@ -185,7 +185,7 @@ JSON  <code>"foobar "</code></pre>
 JSON  <code>"foobar\n"</code></pre>
 
      <pre>Nuit  <code>" foobar\n
-            quxcorge</code>
+             quxcorge</code>
 JSON  <code>"foobar\n quxcorge"</code></pre>
 
      `\u` starts a Unicode code point escape[3]:
