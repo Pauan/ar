@@ -77,57 +77,81 @@ The `@` sigil creates a list:
 
 ---
 
-The `#` and \` and `"` sigils use the following indent rules:
+The `#` sigil completely ignores everything that is indented further than it:
 
-  1. Find the number of characters between the start of the line (including indentation) and the first non-whitespace[1] character after the sigil. Let's call that number `index`
+    Nuit  #foo bar
+            qux corge
+           nou yes
+              maybe someday
+          not included
+    JSON  "not included"
 
-  2. If there aren't any non-whitespace[1] characters after the sigil, then the first line is ignored and `index` is the indentation + the sigil:
+---
 
-        Nuit  `
-                 foobar
-               quxcorge
-               nou yes
-        JSON  "  foobar\nquxcorge\nnou yes"
+The \` and `"` sigils use the following indent rules:
 
-  3. Otherwise, everything between `index` and the end of the line[2] is included in the sigil:
+  1. It is invalid to have a non-whitespace[1] character immediately after the sigil.
+
+  2. The `index` is the indentation + the sigil + 1 (one)
+
+  3. Everything between `index` and the end of the line[2] is included in the sigil:
 
         Nuit  ` foobar
         JSON  "foobar"
 
-  4. Every following line that has an indent that is greater than or equal to `index` is included in the sigil:
+        Nuit  `  foobar
+        JSON  " foobar"
+
+  4. If there aren't any non-whitespace[1] characters after the sigil then the first line is ignored:
+
+        Nuit  `
+        JSON  ""
+
+        Nuit  `
+                foobar
+        JSON  "foobar"
+
+  5. Every following line that has an indent that is greater than or equal to `index` is included in the sigil:
+
+        Nuit  ` foobar
+                quxcorge
+                nou yes
+        JSON  "foobar\nquxcorge\nnou yes"
 
         Nuit  `    foobar
                     quxcorge
                    nou
-                 not included
-        JSON  "foobar\n quxcorge\nnou"
+                 yes
+        JSON  "   foobar\n    quxcorge\n   nou\n yes"
 
-  5. Empty lines are also included, regardless of their indentation:
+        Nuit  `
+                  foobar
+                quxcorge
+                nou yes
+        JSON  "  foobar\nquxcorge\nnou yes"
+
+  6. Empty lines are also included, regardless of their indentation:
 
         Nuit  ` foobar
-                 quxcorge
+                quxcorge
 
                 nou
 
                 yes
-        JSON  "foobar\n quxcorge\n\nnou\n\nyes"
+        JSON  "foobar\nquxcorge\n\nnou\n\nyes"
 
-In addition, the following rules apply to the individual sigils:
-
-`#` completely ignores everything that is included by the above indent rules.
-
-\` creates a string which contains everything that is included by the above indent rules.
+\` creates a string that contains everything that is included by the above indent rules.
 
 `"` is exactly like \` except:
 
-  * Newlines[2] are converted to spaces[1]:
+  * Single newlines[2] are converted to a single space[1]:
 
         Nuit  " foobar
                 quxcorge
                 nou
         JSON  "foobar quxcorge nou"
 
-  * Empty lines are left unchanged:
+  * Two or more newlines[2] are left unchanged:
 
         Nuit  " foobar
 
@@ -150,29 +174,26 @@ In addition, the following rules apply to the individual sigils:
         Nuit  " foo\\bar
         JSON  "foo\\bar"
 
+     `\s` inserts a literal space (`U+0020`):
+
+        Nuit  " foobar\s
+        JSON  "foobar "
+
+     `\n` inserts a literal newline (`U+000A`):
+
+        Nuit  " foobar\n
+        JSON  "foobar\n"
+
+        Nuit  " foobar\n
+                quxcorge
+        JSON  "foobar\n quxcorge"
+
      `\u` starts a Unicode code point escape[3]:
 
         Nuit  " foo\u(20 20AC)bar
         JSON  "foo\u0020\u20ACbar"
 
----
-
-The `\` sigil creates a string which contains the next sigil and continues until the end of the line[2]:
-
-    Nuit  \@foobar
-    JSON  "@foobar"
-
-    Nuit  \#foobar
-    JSON  "#foobar"
-
-    Nuit  \`foobar
-    JSON  "`foobar"
-
-    Nuit  \"foobar
-    JSON  "\"foobar"
-
-    Nuit  \\foobar
-    JSON  "\\foobar"
+    Any other combination of `\` is invalid.
 
 ---
 

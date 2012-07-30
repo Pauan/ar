@@ -18,11 +18,6 @@
            (prn))))))
 
 
-(assert (err "invalid escape $
-  \\$foobar  (line 1, column 2)
-   ^")
-  (nuit-parse "\\$foobar"))
-
 (assert (err "invalid character \t
   \tfoobar  (line 1, column 1)
   ^")
@@ -70,17 +65,6 @@
 ` foo bar qux
     yes maybe no
  questionable"))
-
-(assert (err "invalid indentation
-   quxcorge  (line 3, column 1)
-  ^")
-  (nuit-parse "
-# foobar
- quxcorge
- nou yes
- maybe sometimes
-yestoo
-"))
 
 (assert (err "invalid escape b
   \" foo\\bar  (line 2, column 7)
@@ -155,8 +139,56 @@ yestoo
   (nuit-parse "
 \" foo\\u(DFFF)bar"))
 
+(assert (err "invalid character
+  `foobar  (line 2, column 2)
+   ^")
+  (nuit-parse "
+`foobar
+"))
+
+(assert (err "invalid indentation
+   foobar  (line 3, column 1)
+  ^")
+  (nuit-parse "
+`
+ foobar
+   quxcorge
+ nou yes
+ maybe sometimes
+"))
+
+(assert (err "invalid indentation
+       foobar  (line 4, column 5)
+      ^")
+  (nuit-parse "
+@foo
+    \"
+     foobar
+       quxcorge
+     nou yes
+     maybe sometimes
+"))
+
+(assert (err "invalid escape b
+  \" foobar\\b  (line 1, column 10)
+           ^")
+  (nuit-parse "\" foobar\\b"))
 
 
+
+
+(assert '("\\$foobar")
+  (nuit-parse "\\$foobar"))
+
+(assert '("yestoo")
+  (nuit-parse "
+# foobar
+ quxcorge
+   nou yes
+ maybe sometimes
+   oneday
+yestoo
+"))
 
 (assert '("foobar")
   (nuit-parse " foobar"))
@@ -239,7 +271,7 @@ yestoo
 (assert '("foobar")
   (nuit-parse "foobar"))
 
-(assert '("\"foobar")
+(assert '("\\\"foobar")
   (nuit-parse "\\\"foobar"))
 
 (assert '(("foo" "bar" ("testing") "qux \"\"\" yes" "corge 123" "nou@ yes")
@@ -272,7 +304,6 @@ yestoo
   @ oh yes
    oh my
 "))
-
 
 (assert '(("foo" "bar" ("testing") "qux \"\"\" yes" "corge 123" "nou@ yes")
           ("another" "one" "inb4 this#" "next thread"
@@ -488,20 +519,20 @@ maybe sometimes
 (assert '("foobar\n  quxcorge\nnou yes\nmaybe sometimes")
   (nuit-parse "
 `
- foobar
-   quxcorge
- nou yes
- maybe sometimes
+  foobar
+    quxcorge
+  nou yes
+  maybe sometimes
 "))
 
 (assert '(("foo" "foobar\nquxcorge\nnou yes\nmaybe sometimes"))
   (nuit-parse "
 @foo
     `
-     foobar
-     quxcorge
-     nou yes
-     maybe sometimes
+      foobar
+      quxcorge
+      nou yes
+      maybe sometimes
 "))
 
 (assert '(("foo" "" "foobar" "quxcorge" "nou yes" "maybe sometimes"))
@@ -518,10 +549,10 @@ maybe sometimes
   (nuit-parse "
 @foo
     \"
-     foobar
-       quxcorge
-     nou yes
-     maybe sometimes
+      foobar
+        quxcorge
+      nou yes
+      maybe sometimes
 "))
 
 (assert '(("foo" "" "foobar" "quxcorge" "nou yes" "maybe sometimes"))
@@ -532,4 +563,28 @@ maybe sometimes
     quxcorge
     nou yes
     maybe sometimes
+"))
+
+(assert '("foobar\\s")
+  (nuit-parse "` foobar\\s"))
+
+(assert '("foobar\\n")
+  (nuit-parse "` foobar\\n"))
+
+(assert '("foobar\\n\nquxcorge")
+  (nuit-parse "
+` foobar\\n
+  quxcorge
+"))
+
+(assert '("foobar ")
+  (nuit-parse "\" foobar\\s"))
+
+(assert '("foobar\n")
+  (nuit-parse "\" foobar\\n"))
+
+(assert '("foobar\n quxcorge")
+  (nuit-parse "
+\" foobar\\n
+  quxcorge
 "))
