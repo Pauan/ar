@@ -48,19 +48,19 @@ The ``@`` sigil creates a list:
      Nuit  @foo @bar qux
      JSON  ["foo", ["bar", "qux"]]
 
-3. Look at the second line and see if it has a greater indent than the first line. If not, then it is not added to the list::
-
-     Nuit  @foo bar qux
-           corge
-     JSON  ["foo", "bar qux"]
-
-4. If the second line *does* have a greater indent than the first line, then it is added to the list::
+3. If the second line has a greater indent than the first line, then the second line is added to the list, otherwise it isn't::
 
      Nuit  @foo bar qux
              corge
      JSON  ["foo", "bar qux", "corge"]
 
-5. Every line after the second line that has the **same indent** as the second line is added to the list::
+   ::
+
+     Nuit  @foo bar qux
+           corge
+     JSON  ["foo", "bar qux"]
+
+4. Every line after the second line that has the **same indent** as the second line is added to the list::
 
      Nuit  @foo bar qux
              corge
@@ -69,7 +69,7 @@ The ``@`` sigil creates a list:
                not included
      JSON  ["foo", "bar qux", "corge", "maybe", "someday"]
 
-6. The above rules are recursive, which allows lists to nest within lists::
+5. The above rules are recursive, which allows lists to nest within lists::
 
      Nuit  @foo @bar qux
                   yes nou
@@ -81,7 +81,7 @@ The ``@`` sigil creates a list:
 
 ----
 
-The ``#`` sigil completely ignores the rest of the line\ [#newline]_ and everything that is indented further than it::
+The ``#`` sigil completely ignores the rest of the line\ [#newline]_ and everything that is indented further than the sigil::
 
   Nuit  #foo bar
           qux corge
@@ -174,17 +174,17 @@ The ````` and ``"`` sigils use the following indent rules:
 
 * Within the string, ``\`` has the following meaning:
 
-  * ``\`` at the end of the line\ [#newline]_ inserts a literal newline, except at the end of the string, in which case it does nothing::
+  * ``\`` at the end of the line\ [#newline]_ inserts a literal newline (`U+000A`), except at the end of the string, in which case it does nothing::
 
       Nuit  " foobar\
               quxcorge\
               nou\
       JSON  "foobar\nquxcorge\nnou"
 
-  * ``\`` inserts a literal backslash (``U+005C``)::
+  * ``\\`` inserts a literal backslash (``U+005C``)::
 
-      Nuit  " foo\\\\bar
-      JSON  "foo\\\\bar"
+      Nuit  " foo\\bar
+      JSON  "foo\\bar"
 
   * ``\s`` inserts a literal space (``U+0020``)::
 
@@ -207,7 +207,7 @@ The ````` and ``"`` sigils use the following indent rules:
       Nuit  " foo\u(20 20AC)bar
       JSON  "foo\u0020\u20ACbar"
 
-  Any other combination of ``\`` is invalid.
+  Any other use of ``\`` is invalid.
 
 ----
 
@@ -303,7 +303,7 @@ The following Unicode code points are *always* invalid::
   U+10FFFE
   U+10FFFF
 
-To represent them, you must use a Unicode code point escape\ [#unicode]_
+To represent them, you must use a Unicode code point escape\ [#unicode]_.
 
 ----
 
@@ -326,8 +326,10 @@ All other Unicode characters may be used freely.
 .. [#whitespace]
    Whitespace is defined as the Unicode code point ``U+0020`` (space)
 
+
 .. [#newline]
    End of line is defined as either ``EOF``, ``U+000A`` (newline), ``U+000D`` (carriage return), or ``U+000D`` followed by ``U+000A``. Parsers must convert all end of lines (excluding ``EOF``) within strings to ``U+000A``
+
 
 .. [#unicode]
    A Unicode code point escape starts with ``\u(``, contains one or more strings (which must contain only the hexadecimal characters ``0123456789abcdefABCDEF``) separated by a single space\ [#whitespace]_, and ends with ``)``
