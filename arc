@@ -56,6 +56,7 @@
       (load (build-path exec-dir "04 parameters.arc"))
       (load (build-path exec-dir "05 paths.arc"))
       (load (build-path exec-dir "06 import.arc"))
+      (load (build-path exec-dir "lib/strings.arc"))
 
       (when (debug)
               ;; TODO: hacky

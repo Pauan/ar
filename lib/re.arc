@@ -23,38 +23,12 @@
 
 (def re-match (pattern (o in (stdin)))
   (w/re-matcher (pattern in)
-    (it pattern in))
-  #|(let result ((if (isa in 'string)
-                   %.regexp-match
-                   %.regexp-try-match)
-               regexp.pattern in)
-    (prn result)
-    (when result
-           ;; TODO: figure out how to get rid of this `if`
-      (map [if %.bytes?._
-               %.bytes->string/utf-8._
-               _]
-           result)
-      ;result
-      ))|#
-)
+    (it pattern in)))
 
 (def re-match* (pattern (o in (stdin)) (o :group 0))
   (w/re-matcher (pattern in)
     (drain (it pattern in) #f)
-    (it group))
-  #|(with (pattern  regexp.pattern
-         func     %.regexp-try-match
-         in       (if (isa in 'string)
-                      (instring in)
-                      in))
-    (let g1 (drain (prn:func pattern in) #f)
-      (maplet x g1
-        (= x (x group))
-        (if %.bytes?.x
-            %.bytes->string/utf-8.x
-            x))))|#
-)
+    (it group)))
 
 (def re-match1 (pattern (o in (stdin)))
   (car:re-match pattern in))

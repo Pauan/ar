@@ -307,6 +307,11 @@
     (display x (current-error-port)))
   (newline (current-error-port)))
 
+(define (fraction? x)
+  (and (number? x)
+       (exact? x)
+       (not (integer? x))))
+
 
 ;=============================================================================
 ;  Arc variables
@@ -1074,6 +1079,7 @@
                              (display " " port)
                              (print f (rep x)  port)
                              (display ")" port))
+      (fraction? x)   (f (exact->inexact x) port)
                       (f x port))
   nil)
 

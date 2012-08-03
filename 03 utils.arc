@@ -192,6 +192,34 @@
     (if %.symbol-interned?.x nil t)))
 
 
+#|
+; TODO should probably be in strings.arc or utils.arc
+(def rtokens (str test)
+  (awith (s    (coerce str 'cons)
+          acc  (list nil))
+    (if (no s)
+          (map string:rev acc)
+        (caris s test)
+          (self cdr.s (cons nil acc))
+        (self cdr.s (cons (cons car.s car.acc) cdr.acc)))))
+
+; (posmatch "foo" "fobarfo")
+(def posmatch (pat in)
+  (with (orig  (coerce pat 'cons)
+         in    (coerce in 'cons))
+    (awith (pat   orig
+            in    in
+            jump  in
+            i     0)
+      (if (no pat)
+            i
+          (no in)
+            nil
+          (or (and (is   car.pat car.in)
+                   (self cdr.pat cdr.in jump i))
+              (self orig cdr.jump cdr.jump (+ i 1)))))))|#
+
+
 ;; Pattern matching
 #|
 (casefn
@@ -258,7 +286,7 @@
   ([x . xs] [y . ys]) (and (iso x y) (iso xs ys))
   (x y)               nil)
 |#
-
+#|
 (require-rename case-lambda #%case-lambda)
 
 ;; TODO: dislike how you pass in a variable and it uses `it`
@@ -372,4 +400,4 @@
   `(apply (casefn ,@body) ,x))
 
 (mac match1 (x . body)
-  `((casefn ,@(mappend (fn ((x y)) (list (list x) y)) pair.body)) ,x))
+  `((casefn ,@(mappend (fn ((x y)) (list (list x) y)) pair.body)) ,x))|#

@@ -44,6 +44,10 @@
                              ; TODO use last
                  (unless (is (x:- len.x 1) #\/) "/")))
 
+(def insert-file (x)
+  (push (list x process-string.x folders rev.playlists)
+        strings))
+
 (def normalize-file (k v)
   (w/playlists (cons k playlists)
     (awhenlet (x . rest) v
@@ -55,9 +59,11 @@
             "playlist" (w/playlists (cons cadr.x playlists)
                          (self cddr.x))
             "folder"   (w/folders (cons (process-folder cadr.x) folders)
-                         (self cddr.x)))
-          (push (list x process-string.x folders rev.playlists)
-                strings))
+                         (self cddr.x))
+            "file"     (if (assoc "ignore" cddr.x)
+                           (prn "ignoring file " cadr.x)
+                           (insert-file cadr.x)))
+          (insert-file x))
       (self rest))))
 
 ; http://en.wikipedia.org/wiki/Injective_function
@@ -161,7 +167,7 @@
           (print-files file)
           (print-strings x other)
           (print-playlists x other))
-    (err "invalid error message" n rest)))
+    (err "invalid error message" n x file other)))
 
 (when errors
   (prn)
