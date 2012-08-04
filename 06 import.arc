@@ -15,11 +15,13 @@
                                  ;cwd
                                  ;exec-dir
                                  (exec-path "lib/")))
-(parameter import-cache    (hash (exec-path "02 arc.arc")            t
-                                 (exec-path "lib/01 utils.arc")      t
-                                 (exec-path "lib/02 parameters.arc") t
-                                 (exec-path "lib/03 paths.arc")      t
-                                 (exec-path "lib/04 import.arc")     t))
+(parameter import-cache    (hash ;(exec-path "02 arc.arc")            t
+                                 ;(exec-path "02 arc.arc")            t
+                                 ;(exec-path "lib/01 utils.arc")      t
+                                 ;(exec-path "lib/02 parameters.arc") t
+                                 ;(exec-path "lib/03 paths.arc")      t
+                                 ;(exec-path "lib/04 import.arc")     t
+                                 ))
 (parameter import-suffix   ".arc")
 (parameter import-loading  nil)
 
