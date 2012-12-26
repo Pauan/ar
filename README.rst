@@ -193,4 +193,4 @@ Why would you want to use it over Arc 3.1 or Anarki?
   implemented as ordinary Arc macros
 
 * For more details on the differences between Arc/Nu and Arc 3.1, see `this
-  page <blob/arc/nu/notes/differences.md>`_
+  page <blob/arc%2Fnu/notes/differences.md>`_
