@@ -11,7 +11,7 @@ How to run
 
 Just call ``./arc`` and you'll get a REPL.
 
-You can also use ``./arc foo`` to load the Arc file "foo.arc".
+You can also use ``./arc foo`` to load the Arc file ``foo.arc``.
 
 This also means that the ``arc`` executable is suitable for writing shell scripts::
 
@@ -38,13 +38,13 @@ Arc/Nu is Arc 3.1 but *bettar*. It includes some bug fixes and additional librar
 * ``lib/`` contains other useful libraries
 * ``app/`` contains applications I've written using Arc/Nu
 
-Okay, so it's basically Arc 3.1 (it even copies arc.arc from Arc 3.1!).
-Why would you want to use it over Arc 3.1 or Anarki, then?
+Okay, so it's basically Arc 3.1 (it even copies ``arc.arc`` from Arc 3.1!).
+Why would you want to use it over Arc 3.1 or Anarki?
 
 * It's faster! Arc/Nu strives to be *at least* as fast as Arc 3.1, and in some
   cases is significantly faster. For instance, ``(+ 1 2)`` was 132.48% faster
   in Arc/Nu than in Arc 3.1, last time I checked. You can view the latest timing
-  tests `here <timing>`
+  tests `here <timing>`_
 
 * Arc/Nu makes it possible to add in awesome things like namespaces, aliases,
   and implicit parameters as a library without hacking the compiler.
@@ -147,7 +147,7 @@ Why would you want to use it over Arc 3.1 or Anarki, then?
       $ /path/to/arc < foo.arc
       $ echo "(+ 1 2)" | /path/to/arc
 
-  This idea is courtesy of `this thread <http://arclanguage.org/item?id=10344>`
+  This idea is courtesy of `this thread <http://arclanguage.org/item?id=10344>`_
 
 * Like Anarki, Arc/Nu provides a form that lets you bypass the compiler and drop
   directly into Racket. In Anarki this form is ``$`` and in Arc/Nu it's ``%``::
@@ -194,4 +194,4 @@ Why would you want to use it over Arc 3.1 or Anarki, then?
   implemented as ordinary Arc macros
 
 * For more details on the differences between Arc/Nu and Arc 3.1, see `this
-  page <../../blob/arc%2Fnu/notes/differences.md>`
+  page <../../blob/arc%2Fnu/notes/differences.md>`_
