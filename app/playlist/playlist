@@ -29,11 +29,11 @@
                   ;((out) "Folder where the .xspf files are written to")
 
 (def dirall-ext (exts)
-  (dirall nil (fn (x)
-                (and (no:hidden-file? x)
-                         ; TODO use dirname ?
-                     (or (dir-exists x)
-                         (some (sym:downcase:extension x) exts))))))
+  (sort < (dirall nil (fn (x)
+            (and (no:hidden-file? x)
+                     ; TODO use dirname ?
+                 (or (dir-exists x)
+                     (some (sym:downcase:extension x) exts)))))))
 
 (def process-string (x)
   (regexp (%.regexp-quote x)))
@@ -137,8 +137,10 @@
   (zap todir input)
   (w/cwd input
     (each name (dir ".")
-      (if (hidden-file? name)
-          (debug "ignoring hidden file \"" input name "\"")
+      (if (dir-exists name)
+            (debug "ignoring folder \"" input name "\"")
+          (hidden-file? name)
+            (debug "ignoring hidden file \"" input name "\"")
           (let value (w/infile s name nuit-parse.s)
             (normalize-file name value))))))
 
@@ -181,13 +183,19 @@
   (each x playlists
     (push (cons file rest) files.x)))
 
+; TODO: ->sxml has to be run before w/cwd
 (let output cadr.script-args
   (zap todir output)
-  (each (k v) files
-    (iflet v process-file.k
-      (let v (->sxml k v)
-        (w/cwd output
+  (let all (->sxml "All" dirall-ext.filetypes)
+    (w/cwd output
+      (w/outfile out "All.xspf"
+        (disp all out)))
+    (each (k v) files
+      (iflet v process-file.k
+        (let v (->sxml k v)
           (debug "writing to \"" output k ".xspf\"")
-          (w/outfile out (+ k ".xspf")
-            (disp v out))))
-      (debug "ignoring playlist \"" k "\" because it is empty"))))
+          (w/cwd output
+            (w/outfile out (+ k ".xspf")
+              (disp v out))))
+        (debug "ignoring playlist \"" k "\" because it is empty")))
+))

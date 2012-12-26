@@ -61,8 +61,8 @@
 (= dirname  (make-path->string:compose %.path-only           expandpath))
 (= basename (make-path->string:compose %.file-name-from-path expandpath))
 
-(def abspath ((o x))
-  (let x expandpath.x
+(def abspath args
+  (let x (expandpath:apply string args)
     (if empty.x
           cwd
         ;; TODO: is this necessary? fix it if not
@@ -70,8 +70,8 @@
           (%.path->string %.normalize-path.x)
         x))) ;path->complete-path
 
-(def absdir ((o x))
-  (dirname abspath.x))
+(def absdir args
+  (dirname:apply abspath args))
 
 
 (def dirall ((o x ".") (o f idfn))
