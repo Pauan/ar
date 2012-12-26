@@ -43,8 +43,7 @@ Why would you want to use it over Arc 3.1 or Anarki?
 
 * It's faster! Arc/Nu strives to be *at least* as fast as Arc 3.1, and in some
   cases is significantly faster. For instance, ``(+ 1 2)`` was 132.48% faster
-  in Arc/Nu than in Arc 3.1, last time I checked. You can view the latest timing
-  tests `here <timing>`_
+  in Arc/Nu than in Arc 3.1, last time I checked.
 
 * Arc/Nu makes it possible to add in awesome things like namespaces, aliases,
   and implicit parameters as a library without hacking the compiler.
@@ -108,31 +107,31 @@ Why would you want to use it over Arc 3.1 or Anarki?
 
 * The REPL is implemented **substantially** better:
 
-    * ``Ctrl+D`` exits the REPL
+  * ``Ctrl+D`` exits the REPL
 
-    * ``Ctrl+C`` aborts the current computation but doesn't exit the REPL::
+  * ``Ctrl+C`` aborts the current computation but doesn't exit the REPL::
 
-          > ((afn () (self)))
-          ^Cuser break
-          >
+        > ((afn () (self)))
+        ^Cuser break
+        >
 
-    * Readline support is built-in, which means:
+  * Readline support is built-in, which means:
 
-      * Pressing ``Tab`` will autocomplete the names of global variables::
+    * Pressing ``Tab`` will autocomplete the names of global variables::
 
-            > f
-            filechars    file-exists  fill-table   find         firstn       flat         flushout     fn           for          force-close  forlen       fromdisk     fromstring
+          > f
+          filechars    file-exists  fill-table   find         firstn       flat         flushout     fn           for          force-close  forlen       fromdisk     fromstring
 
-      * Pressing ``Up`` will recall the entire expression rather than only the
-        last line::
+    * Pressing ``Up`` will recall the entire expression rather than only the
+      last line::
 
-            > (+ 1
-                 2
-                 3)
-            6
-            > (+ 1
-                 2
-                 3)
+          > (+ 1
+               2
+               3)
+          6
+          > (+ 1
+               2
+               3)
 
 * You can use the ``arc`` executable to write shell scripts::
 
@@ -194,4 +193,4 @@ Why would you want to use it over Arc 3.1 or Anarki?
   implemented as ordinary Arc macros
 
 * For more details on the differences between Arc/Nu and Arc 3.1, see `this
-  page <../../blob/arc%2Fnu/notes/differences.md>`_
+  page <blob/arc/nu/notes/differences.md>`_
