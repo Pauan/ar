@@ -1,3 +1,11 @@
+How to install
+==============
+
+::
+
+  git clone --recursive https://github.com/Pauan/ar.git arc-nu
+
+
 How to run
 ==========
 
