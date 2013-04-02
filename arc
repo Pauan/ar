@@ -42,4 +42,8 @@
             (ac-load (car arguments))))
 
       (when (or repl? (null? arguments))
-        (ac-load (build-path exec-dir "05 repl"))))))
+        (ac-load (build-path exec-dir "05 repl")))
+
+      ;; This is so that it doesn't print anything when exiting the REPL
+      ; TODO is this necessary?
+      (void))))

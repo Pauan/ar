@@ -656,10 +656,7 @@
                    "lib/strings"
                    "lib/re")))
       (ac-load (build-path dir x)))
-    (f ac-load)
-    ;; This is so that it doesn't print anything when exiting the REPL
-    ; TODO is this necessary?
-    (void)))
+    (f ac-load)))
 
 ;=============================================================================
 ;  import

@@ -24,7 +24,7 @@ Use ``./arc -h`` to see all the available options.
 What is it?
 ===========
 
-Arc/Nu is Arc 3.1 but *bettar*. It includes bug fixes, new features, additional libraries, and applications that I've found useful.
+Arc/Nu is Arc 3.1 but *bettar*. It includes bug fixes, new features, additional libraries, and applications that I've found useful. Despite that, it's still completely backwards compatible with Arc 3.1
 
 * ``01 nu`` is the Arc/Nu compiler
 * ``02 arc`` is copied unmodified from Arc 3.1
@@ -39,7 +39,7 @@ Arc/Nu is Arc 3.1 but *bettar*. It includes bug fixes, new features, additional 
 So, why would you want to use it over Arc 3.1 or Anarki?
 
 * It's faster! Arc/Nu strives to be *at least* as fast as Arc 3.1, and in some
-  cases is significantly faster. For instance, ``(+ 1 2)`` was 132.48% faster
+  cases is significantly faster. For instance, ``(+ 1 2)`` was 133.19% faster
   in Arc/Nu than in Arc 3.1, last time I checked.
 
 * Arc/Nu uses boxes internally. This means you get an awesome namespace system (using the ``w/include``, ``w/exclude``, ``w/rename``, and ``w/prefix`` macros). You can also turn on hyper-static scope and hygienic macros.
