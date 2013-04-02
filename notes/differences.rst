@@ -4,113 +4,118 @@ Differences between Arc/Nu and Arc 3.1
 Bug Fixes
 ---------
 
-  * ``coerce`` and ``annotate`` use Arc's ``is`` rather than Racket's ``eqv?``
+* ``coerce`` and ``annotate`` use Arc's ``is`` rather than Racket's ``eqv?``
 
-  * The following macro works differently in Arc/Nu (use `%` instead):
+* The following macro works differently in Arc/Nu (use ``%`` instead)::
 
-        > (mac $ (x) `(cdr `(0 . ,,x)))
-        > ($ (let a 5 a))
-        5
+    > (mac $ (x) `(cdr `(0 . ,,x)))
+    > ($ (let a 5 a))
+    5
 
-  * Lexical variables take precedence over macros:
+* Lexical variables take precedence over macros::
 
-        > (mac foo (x) `(+ ,x 2))
-        > (foo 0)
-        2
-        > (let foo [+ _ 5] (foo 0))
-        5
+    > (mac foo (x) `(+ ,x 2))
+    > (foo 0)
+    2
+    > (let foo [+ _ 5] (foo 0))
+    5
 
-  * Global variables are represented with their Arc names:
+* Global variables are represented with their Arc names::
 
-        > x
-        error: x: undefined;
-         cannot reference undefined identifier
+    > x
+    error: x: undefined;
+     cannot reference undefined identifier
 
-  * Function rest args are `nil`-terminated:
+* Function rest args are ``nil``-terminated::
 
-        > (cdr ((fn args args) 1))
-        nil
+    > (cdr ((fn args args) 1))
+    nil
 
-  * `uniq` is implemented using actual Racket gensyms
+* ``uniq`` is implemented using actual Racket gensyms
 
-  * The queue bug [has been fixed](http://arclanguage.org/item?id=13616)
+* The queue bug [has been fixed](http://arclanguage.org/item?id=13616)
 
 
 New Features
 ------------
 
-  * The following Arc macros are defined:
+* The following Arc macros are defined::
 
-        % assign curly-brackets fn get-setter if import quasiquote quote reimport square-brackets var w/exclude w/include w/prefix w/rename
+    % assign curly-brackets fn get-setter if import quasiquote quote reimport square-brackets var w/exclude w/include w/prefix w/rename
 
-  * The following Arc functions are defined:
+* The following Arc functions are defined::
 
-        ->box call-w/stderr sym->filename
+    ->box call-w/stderr sym->filename
 
-  * Functions print with `#<fn:...>` and macros print with `#<mac:...>`. In
-    addition, macros have names:
+* Fractions print as decimals::
 
-        > do
-        #<mac:do>
+    > 1/3
+    0.3333333333333333
 
-  * `[a b c]` is expanded into `(square-brackets a b c)` which is then
-    implemented as a macro:
+* Functions print with ``#<fn:...>`` and macros print with ``#<mac:...>``. In
+  addition, macros have names::
 
-        (mac square-brackets body
-          `(fn (_) ,body))
+    > do
+    #<mac:do>
 
-    Likewise, `{a b c}` is expanded into `(curly-brackets a b c)`
+* ``[a b c]`` is expanded into ``(square-brackets a b c)`` which is then
+  implemented as a macro::
 
-    This makes it easy to change the meaning of `[...]` and `{...}` from
-    within Arc
+    (mac square-brackets body
+      `(fn (_) ,body))
 
-  * Anything not understood by the compiler is considered to be a literal.
-    Thus, Racket values can be used freely:
+  Likewise, ``{a b c}`` is expanded into ``(curly-brackets a b c)``
 
-        > (if #f 5 10)
-        10
+  This makes it easy to change the meaning of ``[...]`` and ``{...}`` from
+  within Arc
 
-        > #(foo bar qux)
-        #(foo bar qux)
+* Anything not understood by the compiler is considered to be a literal.
+  Thus, Racket values can be used freely::
 
-    In addition, function and macro values can be included by macros:
+    > (if #f 5 10)
+    10
 
-        > (mac foo (x)
-            `(,let a 5
-               (,+ ,x a)))
+    > #(foo bar qux)
+    #(foo bar qux)
 
-        > (macex1 '(foo 10))
-        (#<mac:let> a 5 (#<fn:+> 10 a))
+  In addition, function and macro values can be included by macros::
 
-        > (foo 10)
-        15
+    > (mac foo (x)
+        `(,let a 5
+           (,+ ,x a)))
 
-    This includes boxes:
+    > (macex1 '(foo 10))
+    (#<mac:let> a 5 (#<fn:+> 10 a))
 
-        > (mac foo (x)
-            `(,(->box 'let) a 5
-               (,(->box '+) ,x a)))
+    > (foo 10)
+    15
 
-        > (macex1 '(foo 10))
-        (#<box:let> a 5 (#<box:+> 10 a))
+  This includes boxes::
 
-        > (foo 10)
-        15
+    > (mac foo (x)
+        `(,(->box 'let) a 5
+           (,(->box '+) ,x a)))
 
-    This enables you to write hygienic macros in Arc
+    > (macex1 '(foo 10))
+    (#<box:let> a 5 (#<box:+> 10 a))
 
-  * A new `'inline-calls` declare mode, which is even faster than
-    `'direct-calls`:
+    > (foo 10)
+    15
 
-        > (declare 'inline-calls t)
+  This enables you to write hygienic macros in Arc
 
-        > (%.ac '(+ 1 2))
-        (#<fn:+> 1 2)
+* A new ``'inline-calls`` declare mode, which is even faster than
+  ``'direct-calls``::
 
-    Basically, it takes the value of the symbol at compile-time and splices it
-    into the expression. This is much faster than direct-calls because it
-    doesn't need to do a global lookup at runtime.
+    > (declare 'inline-calls t)
 
-    The downside is that if you redefine any global variable, even functions,
-    those changes aren't retroactive: they'll affect new code but not old
-    code
+    > (%.ac '(+ 1 2))
+    (#<fn:+> 1 2)
+
+  Basically, it takes the value of the symbol at compile-time and splices it
+  into the expression. This is much faster than direct-calls because it
+  doesn't need to do a global lookup at runtime.
+
+  The downside is that if you redefine any global variable, even functions,
+  those changes aren't retroactive: they'll affect new code but not old
+  code
