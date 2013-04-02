@@ -33,7 +33,7 @@ Bug Fixes
 
 * ``uniq`` is implemented using actual Racket gensyms
 
-* The queue bug [has been fixed](http://arclanguage.org/item?id=13616)
+* The queue bug `has been fixed <http://arclanguage.org/item?id=13616>`_
 
 
 New Features
@@ -52,7 +52,7 @@ New Features
     > 1/3
     0.3333333333333333
 
-* Functions print with ``#<fn:...>`` and macros print with ``#<mac:...>``. In
+* Functions print as ``#<fn:...>`` and macros print as ``#<mac:...>``. In
   addition, macros have names::
 
     > do
