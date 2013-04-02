@@ -59,7 +59,9 @@ So, why would you want to use it over Arc 3.1 or Anarki?
     * Pressing ``Tab`` will autocomplete the names of global variables::
 
           > f
-          filechars    file-exists  fill-table   find         firstn       flat         flushout     fn           for          force-close  forlen       fromdisk     fromstring
+          filechars    find         flat         for          fromdisk
+          file-exists  findsubseq   flushout     force-close  fromstring
+          fill-table   firstn       fn           forlen
 
     * Pressing ``Up`` will recall the entire expression rather than only the
       last line::
@@ -83,7 +85,8 @@ So, why would you want to use it over Arc 3.1 or Anarki?
   In addition, it supports common Unix idioms such as::
 
       $ /path/to/arc < foo.arc
-      $ echo "(+ 1 2)" | /path/to/arc
+      $ echo "(+ 1 2)"       | /path/to/arc
+      $ echo "(prn (+ 1 2))" | /path/to/arc
 
   This idea is courtesy of `this thread <http://arclanguage.org/item?id=10344>`_
 
@@ -132,4 +135,4 @@ So, why would you want to use it over Arc 3.1 or Anarki?
   implemented as ordinary Arc macros
 
 * For more details on the differences between Arc/Nu and Arc 3.1, see `this
-  page <ar/blob/arc%2Fnu/notes/differences.rst>`_
+  page <notes/differences.rst>`_

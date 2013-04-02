@@ -1,7 +1,15 @@
+(%require readline/readline)
+
 ;; http://arclanguage.org/item?id=10344
 (let interactive (%:terminal-port? (current-input-port))
   (when interactive
-    (%:namespace-require 'readline/rep-start))
+    (%require readline/rep-start)
+    ((% set-completion-function!)
+      (fn (s)
+        (collect:each (k _) (%.globals)
+          (zap string k)
+          (when (headmatch s k) ; TODO from lib/strings
+            (yield k))))))
 
   (def repl ()
     ;; This causes Ctrl+C to return to the REPL, rather than aborting.
