@@ -5,28 +5,28 @@
         strings ; Only needed for urlencode-path
         sxml)
 
-(parameter playlists  nil)
-(parameter folders    nil)
+(var playlists  nil)
+(var folders    nil)
 
-(= version      "2.0"
-   options      (obj)
+(var version      "2.0"
+     options      (obj)
 
-   strings      nil
-   errors       nil
-   files        (obj)
+     strings      nil
+     errors       nil
+     files        (obj)
 
-   filetypes    '(flac flv mid mkv mp3 mp4 ogg ogm wav webm wma)
+     filetypes    '(flac flv mid mkv mp3 mp4 ogg ogm wav webm wma)
 
-   script-args  (w/parse-args script-args
-                  ("-v" "--version" ()
-                    "Displays the version number and exits"
-                    (prn version)
-                    (quit))
-                  ("-d" "--debug" ()
-                    "Prints additional messages"
-                    (= debug? t))))
-                  ;((in)  "Folder where you keep your templates")
-                  ;((out) "Folder where the .xspf files are written to")
+     script-args  (w/parse-args script-args
+                    ("-v" "--version" ()
+                      "Displays the version number and exits"
+                      (prn version)
+                      (quit))
+                    ("-d" "--debug" ()
+                      "Prints additional messages"
+                      (= debug? t))))
+                    ;((in)  "Folder where you keep your templates")
+                    ;((out) "Folder where the .xspf files are written to")
 
 (def dirall-ext (exts)
   (sort < (dirall nil (fn (x)
@@ -49,16 +49,16 @@
         strings))
 
 (def normalize-file (k v)
-  (w/playlists (cons k playlists)
+  (w/ playlists (cons k playlists)
     (awhenlet (x . rest) v
       (if acons.x
           (case car.x
             "title"    (= playlists (cons cadr.x cdr.playlists))
             "include"  (push (list* 'include (list car.playlists) cdr.x)
                              strings)
-            "playlist" (w/playlists (cons cadr.x playlists)
+            "playlist" (w/ playlists (cons cadr.x playlists)
                          (self cddr.x))
-            "folder"   (w/folders (cons (process-folder cadr.x) folders)
+            "folder"   (w/ folders (cons (process-folder cadr.x) folders)
                          (self cddr.x))
             "file"     (if (assoc "ignore" cddr.x)
                            (prn "ignoring file " cadr.x)
@@ -135,7 +135,7 @@
 ;=============================================================================
 (let input car.script-args
   (zap todir input)
-  (w/cwd input
+  (w/ cwd input
     (each name (dir ".")
       (if (dir-exists name)
             (debug "ignoring folder \"" input name "\"")
@@ -183,19 +183,20 @@
   (each x playlists
     (push (cons file rest) files.x)))
 
-; TODO: ->sxml has to be run before w/cwd
+; TODO: ->sxml has to be run before w/ cwd
 (let output cadr.script-args
   (zap todir output)
-  (let all (->sxml "All" dirall-ext.filetypes)
-    (w/cwd output
-      (w/outfile out "All.xspf"
-        (disp all out)))
-    (each (k v) files
-      (iflet v process-file.k
-        (let v (->sxml k v)
-          (debug "writing to \"" output k ".xspf\"")
-          (w/cwd output
-            (w/outfile out (+ k ".xspf")
-              (disp v out))))
-        (debug "ignoring playlist \"" k "\" because it is empty")))
+  (let all dirall-ext.filetypes
+    (let all (->sxml "All" all)
+      (w/ cwd output
+        (w/outfile out "All.xspf"
+          (disp all out)))
+      (each (k v) files
+        (iflet v process-file.k
+          (let v (->sxml k v)
+            (debug "writing to \"" output k ".xspf\"")
+            (w/ cwd output
+              (w/outfile out (+ k ".xspf")
+                (disp v out))))
+          (debug "ignoring playlist \"" k "\" because it is empty"))))
 ))

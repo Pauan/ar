@@ -1,20 +1,20 @@
 (mac redef (name parms . body)
-  `(let orig ,name
+  `(let ,'orig ,name
      (= ,name (fn ,parms ,@body))))
 
 (mac remac (name parms . body)
-  `(let orig (rep ,name)
+  `(let ,'orig (rep ,name)
      (= ,name (annotate 'mac (fn ,parms ,@body)))))
 
 (mac extend (name parms test . body)
   (w/uniq (args a b)
-    `(withs (orig  ,name
-             ,a    (fn ,parms ,test)
-             ,b    (fn ,(cons 'it parms) ,@body))
+    `(withs (,'orig  ,name
+             ,a      (fn ,parms ,test)
+             ,b      (fn ,(cons 'it parms) ,@body))
        (= ,name (fn ,args
                   (aif (apply ,a ,args)
-                       (apply ,b it ,args)
-                       (apply orig ,args)))))))
+                       (apply ,b ,'it ,args)
+                       (apply ,'orig ,args)))))))
 
 #|(mac extend (name parms test . body)
   (w/uniq args
@@ -24,13 +24,14 @@
             (apply orig ,args)))))|#
 
 
+#| TODO
 (= ref-types* (obj))
 
 (extend ref (x . args) (orig ref-types* type.x)
   (apply it x args))
 
 (mac defcall (type parms . body)
-  `(= (ref-types* ',type) (fn ,parms ,@body)))
+  `(= (ref-types* ',type) (fn ,parms ,@body)))|#
 
 
 (def eachfn (f xs)
@@ -67,33 +68,65 @@
 
 
 (mac collect body
-  `(accum yield ,@body))
+  `(accum ,'yield ,@body))
 
+
+#|(def debug args
+  ;(apply prn (intersperse " " args))
+  nil)|#
+
+(mac w/ (x y . body)
+  (w/uniq u
+    `(let ,u nil
+       (%.dynamic-wind (fn () (= ,u ,x)
+                              (= ,x ,y))
+                       (fn () ,@body)
+                       (fn () (= ,x ,u))))))
+
+(remac do args
+  (cons %.nocompile
+    `(begin ,@(%.ac-all args))))
+
+(mac make-implicit (x y)
+  (w/uniq (val)
+    `(do (var ,x ,y)
+         (get-setter ,x
+           (fn ()     `(,,x))
+           (fn (,val) `(,,x ,,val))))))
+
+(var debug? nil)
 
 (def debug args
-  ;(apply prn (intersperse " " args))
-  nil)
+  (when debug?
+    (apply prn args))) ;(intersperse " " )
 
 
 (mac %no (x)
   (cons %.nocompile x))
 
 
-(def var (x)
+#|(def var (x)
   ((%.namespace) x))
 
 (extend sref (x v k) (is x var)
-  (sref (%.namespace) v k))
+  (sref (%.namespace) v k))|#
+
+; TODO: remove this later
+#|(mac parameter (x y)
+  (w/uniq (var body)
+    `(do (var ,x ,y)
+         (mac ,(sym:string "w/" x) (,var . ,body)
+           `(w/ ,',x ,,var ,@,body))
+         ,x)))|#
 
 
 (mac %require args
-  `(% (parameterize ((current-namespace nu-namespace))
-        (namespace-require ,@(map (fn (x) `',x) args)))))
+  `(% (namespace-require ,@(map (fn (x) `',x) args))))
 
-(mac require-rename args
+#|(mac require-rename args
   `((% namespace-require) ,@(map (fn ((x y))
                                    `'(rename racket/base ,y ,x))
-                                 pair.args)))
+                                 pair.args)))|#
 
 (= list* %.list*)
 
@@ -109,7 +142,7 @@
       ,@(map cadr p))))
 
 (mac awith (parms . body)
-  `(rwith self ,parms ,@body))
+  `(rwith ,'self ,parms ,@body))
 
 (mac alet (x y . body)
   `(awith (,x ,y) ,@body))
@@ -161,7 +194,7 @@
 
 
 (mac awhile args
-  `(whilet it ,@args))
+  `(whilet ,'it ,@args))
 
 
 #|(mac w/stderr (var . body)

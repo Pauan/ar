@@ -3,7 +3,7 @@
 
 (%require racket/path)
 
-(make-parameter cwd
+(make-implicit cwd
   (%.make-derived-parameter %.current-directory
     (fn (v) (zap string v)
             (if empty.v
@@ -12,7 +12,7 @@
     (fn (v) (%.path->string v))))
 
 ;; TODO: inefficient
-(make-parameter script-args
+(make-implicit script-args
   (%.make-derived-parameter %.current-command-line-arguments
     %.list->vector
     %.vector->list))
@@ -46,10 +46,10 @@
                  (self cdr.x (cons c acc))))))
      args nil)))
 
-(= exec-dir %.exec-dir)
+#|(= exec-dir %.exec-dir)
 
 (def exec-path args
-  (apply path exec-dir args))
+  (apply path exec-dir args))|#
 
 
 (def make-path->string (converter)
@@ -75,7 +75,7 @@
 
 
 (def dirall ((o x ".") (o f idfn))
-  (w/cwd x
+  (w/ cwd x
     ;; alet
     ((afn (d)
        (mappend (fn (x)

@@ -1,11 +1,11 @@
 ;;  sxml.arc: converts S-expressions into XML
 
-(= xml-declaration* "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
-   html-doctype*    "<!DOCTYPE html>")
+(var xml-declaration* "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+     html-doctype*    "<!DOCTYPE html>")
 
 ; http://dev.w3.org/html5/markup/syntax.html#void-element
-(= html-void-elements* '(area base br col command embed hr img input
-                         keygen link meta param source track wbr))
+(var html-void-elements* '(area base br col command embed hr img input
+                           keygen link meta param source track wbr))
 
 
 (def noop (s type depth))
@@ -15,8 +15,8 @@
     (pr "\n" (newstring (* depth 2) #\space))))
 
 
-(parameter mode   noop)
-(parameter parser nil)
+(var mode   noop)
+(var parser nil)
 
 
 (def attrs (xs)
@@ -73,15 +73,15 @@
   (tostring:parse s depth))
 
 (def ->html (root)
-  (w/parser 'html
+  (w/ parser 'html
     (string html-doctype* (->string root))))
 
 (def ->xml (root)
-  (w/parser 'xml
+  (w/ parser 'xml
     (string xml-declaration* (->string root))))
 
 (mac w/pretty args
-  `(w/mode pretty ,@args))
+  `(w/ mode pretty ,@args))
 
 
 ;; why doesn't it work?!

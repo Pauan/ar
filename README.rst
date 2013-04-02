@@ -24,86 +24,25 @@ Use ``./arc -h`` to see all the available options.
 What is it?
 ===========
 
-Arc/Nu is Arc 3.1 but *bettar*. It includes some bug fixes and additional libraries and applications that I've found useful.
+Arc/Nu is Arc 3.1 but *bettar*. It includes bug fixes, new features, additional libraries, and applications that I've found useful.
 
-* ``01 nu.rkt`` is the Arc/Nu compiler
-* ``02 arc.arc`` is copied unmodified from Arc 3.1
-* ``03 utils.arc`` contains generic utilities
-* ``04 parameters.arc`` implements implicit parameters
-* ``05 paths.arc`` contains functions for inspecting and manipulating paths
-* ``06 import.arc`` implements an ``import`` macro for loading files
-* ``07 repl.arc`` implements a REPL
+* ``01 nu`` is the Arc/Nu compiler
+* ``02 arc`` is copied unmodified from Arc 3.1
+* ``03 utils`` contains generic utilities
+* ``04 paths`` contains functions for inspecting and manipulating paths
+* ``05 repl`` implements a REPL
 * ``arc`` is an executable that will load the above files in order
 
 * ``lib/`` contains other useful libraries
 * ``app/`` contains applications I've written using Arc/Nu
 
-Okay, so it's basically Arc 3.1 (it even copies ``arc.arc`` from Arc 3.1!).
-Why would you want to use it over Arc 3.1 or Anarki?
+So, why would you want to use it over Arc 3.1 or Anarki?
 
 * It's faster! Arc/Nu strives to be *at least* as fast as Arc 3.1, and in some
   cases is significantly faster. For instance, ``(+ 1 2)`` was 132.48% faster
   in Arc/Nu than in Arc 3.1, last time I checked.
 
-* Arc/Nu makes it possible to add in awesome things like namespaces, aliases,
-  and implicit parameters as a library without hacking the compiler.
-
-  As an example, Arc/Nu implements ``defcall`` as a library by extending the
-  ``ref`` function in ``lib/01 utils.arc`` and implements implicit parameters
-  in ``lib/02 parameters.arc``
-
-* Racket's keyword arguments are fully supported::
-
-      > (def foo (:bar (o :qux 5))
-          (list bar qux))
-
-      > (foo :bar 10)
-      (10 5)
-
-      > (foo :qux 20)
-      (nil 20)
-
-      > (foo :qux 2 :bar 1)
-      (1 2)
-
-  Not only are keywords supported, but they're arguably supported better
-  than in Racket::
-
-      > (mac tester (:test)
-          `(do (prn ,test)
-               (+ 1 2)))
-
-      > (tester)
-      nil
-      3
-
-      > (tester :test "hello!")
-      hello!
-      3
-
-  Yeah, that's right, you can use keyword arguments with macros too. And it
-  works exactly the same as it does with functions: no mucking around with
-  ``syntax-case``. But wait, that's not all!
-
-  ::
-
-      > (def proxy args
-          (prn args)
-          (apply foo args))
-
-      > (proxy :bar 10)
-      (:bar 10)
-      (10 5)
-
-      > (apply foo :bar 10 nil)
-      (10 5)
-
-      > (apply foo '(:bar 10))
-      (10 5)
-
-  Functions receive the keyword arguments in their rest arg and ``apply``
-  works too. This means you don't need to muck around with
-  ``make-keyword-procedure`` or ``keyword-apply`` at all. Much cleaner.
+* Arc/Nu uses boxes internally. This means you get an awesome namespace system (using the ``w/include``, ``w/exclude``, ``w/rename``, and ``w/prefix`` macros). You can also turn on hyper-static scope and hygienic macros.
 
 * The REPL is implemented **substantially** better:
 
@@ -161,11 +100,11 @@ Why would you want to use it over Arc 3.1 or Anarki?
       1
       #f
 
-  This also lets you call Arc/Nu compiler/Racket functions that aren't exposed
+  This also lets you call Arc/Nu and Racket functions that aren't exposed
   to Arc::
 
-      > (%.make-global-var 5)
-      #<fn>
+      > (%.->name +)
+      +
 
       > (%.string? "foo")
       #t
@@ -193,4 +132,4 @@ Why would you want to use it over Arc 3.1 or Anarki?
   implemented as ordinary Arc macros
 
 * For more details on the differences between Arc/Nu and Arc 3.1, see `this
-  page <ar/blob/arc%2Fnu/notes/differences.md>`_
+  page <ar/blob/arc%2Fnu/notes/differences.rst>`_

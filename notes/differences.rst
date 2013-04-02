@@ -1,10 +1,12 @@
-Differences between Arc/Nu and Arc/pg
-=====================================
+Differences between Arc/Nu and Arc 3.1
+======================================
 
 Bug Fixes
 ---------
 
-  * The following macro works differently in Nu (use `%` instead):
+  * ``coerce`` and ``annotate`` use Arc's ``is`` rather than Racket's ``eqv?``
+
+  * The following macro works differently in Arc/Nu (use `%` instead):
 
         > (mac $ (x) `(cdr `(0 . ,,x)))
         > ($ (let a 5 a))
@@ -21,7 +23,8 @@ Bug Fixes
   * Global variables are represented with their Arc names:
 
         > x
-        error: reference to undefined identifier: x
+        error: x: undefined;
+         cannot reference undefined identifier
 
   * Function rest args are `nil`-terminated:
 
@@ -36,20 +39,13 @@ Bug Fixes
 New Features
 ------------
 
-  * The reader expands `:foo` to the Racket keyword `#:foo` rather than the
-    symbol `:foo`
-
-  * The following special Racket values are defined:
-
-        #%app #%begin #%call #%datum #%if #%lambda #%let* #%set #%set-global #%top
-
   * The following Arc macros are defined:
 
-        % assign curly-brackets fn if square-brackets quasiquote quote
+        % assign curly-brackets fn get-setter if import quasiquote quote reimport square-brackets var w/exclude w/include w/prefix w/rename
 
   * The following Arc functions are defined:
 
-        %symbol-global call-w/stderr close1 pipe ref
+        ->box call-w/stderr sym->filename
 
   * Functions print with `#<fn:...>` and macros print with `#<mac:...>`. In
     addition, macros have names:
@@ -68,14 +64,6 @@ New Features
     This makes it easy to change the meaning of `[...]` and `{...}` from
     within Arc
 
-  * `quote` passes its value unchanged through the compiler, instead of
-    copying it:
-
-        > (mac inline (x) `',(eval x))
-        > (= x '(a b c))
-        > (is x (inline x))
-        t
-
   * Anything not understood by the compiler is considered to be a literal.
     Thus, Racket values can be used freely:
 
@@ -93,6 +81,18 @@ New Features
 
         > (macex1 '(foo 10))
         (#<mac:let> a 5 (#<fn:+> 10 a))
+
+        > (foo 10)
+        15
+
+    This includes boxes:
+
+        > (mac foo (x)
+            `(,(->box 'let) a 5
+               (,(->box '+) ,x a)))
+
+        > (macex1 '(foo 10))
+        (#<box:let> a 5 (#<box:+> 10 a))
 
         > (foo 10)
         15

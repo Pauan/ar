@@ -27,10 +27,10 @@
                     (if (isnt expr %.eof)
                           (let that? (in expr 'that 'thatexpr)
                             (unless that?
-                              (%.assign-global-raw (%.namespace) 'thatexpr expr))
+                              (%.set-raw 'thatexpr expr))
                             (let val eval.expr
                               (unless that?
-                                (%.assign-global-raw (%.namespace) 'that val))
+                                (%.set-raw 'that val))
                               (when interactive
                                 (write val)
                                 (prn))
