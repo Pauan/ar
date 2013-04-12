@@ -3,7 +3,7 @@
 
 (%require racket/path)
 
-(make-implicit cwd
+(parameter-var cwd
   (%.make-derived-parameter %.current-directory
     (fn (v) (zap string v)
             (if empty.v
@@ -12,7 +12,7 @@
     (fn (v) (%.path->string v))))
 
 ;; TODO: inefficient
-(make-implicit script-args
+(parameter-var script-args
   (%.make-derived-parameter %.current-command-line-arguments
     %.list->vector
     %.vector->list))

@@ -45,7 +45,7 @@ New Features
 
 * The following Arc functions are defined::
 
-    ->box call-w/stderr sym->filename
+    call-w/stderr sym->box sym->filename
 
 * Fractions print as decimals::
 
@@ -93,8 +93,8 @@ New Features
   This includes boxes::
 
     > (mac foo (x)
-        `(,(->box 'let) a 5
-           (,(->box '+) ,x a)))
+        `(,(sym->box 'let) a 5
+           (,(sym->box '+) ,x a)))
 
     > (macex1 '(foo 10))
     (#<box:let> a 5 (#<box:+> 10 a))

@@ -20,7 +20,10 @@
         (on-err (fn (c)
                   ;; http://arclanguage.org/item?id=10344
                   (w/stdout (stderr)
-                    (prn "error: " details.c))
+                    (if debug?
+                        ; Displays the stack trace when debug? is t
+                        ((%.error-display-handler) (string "error: " details.c) c)
+                        (prn "error: " details.c)))
                   ;; Abort to loop. (Calling `repl` directly would not be a tail call.)
                   (%:abort-current-continuation (default-continuation-prompt-tag)))
                 (fn ()

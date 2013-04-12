@@ -87,12 +87,17 @@
   (cons %.nocompile
     `(begin ,@(%.ac-all args))))
 
-(mac make-implicit (x y)
+(mac parameter-var (x y)
   (w/uniq (val)
     `(do (var ,x ,y)
          (get-setter ,x
            (fn ()     `(,,x))
            (fn (,val) `(,,x ,,val))))))
+
+(mac w/parameter (x y . body)
+  (cons %.nocompile
+    `(parameterize ((,(%.ac x) ,(%.ac y)))
+       ,@(%.ac-all body))))
 
 (var debug? nil)
 

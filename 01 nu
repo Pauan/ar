@@ -1,5 +1,5 @@
 #lang racket/base
-;; Nu Arc Compiler -- Manifest Destiny
+;; Arc/Nu Compiler -- Manifest Destiny
 ;; http://www.youtube.com/watch?v=qXp3qjeM0e4
 
 ;; TODO: look for uses of null? and replace them with empty-stream? as needed
@@ -566,9 +566,11 @@
 ; expansion algorithm from "Quasiquotation in Lisp"
 ; http://repository.readscheme.org/ftp/papers/pepm99/bawden.pdf
 (define (qq-atom x)
-  (if (hygienic-macros?)
-      (->box x)
-      (list (->orig-box 'quote) x)))
+  (if (symbol? x)
+      (if (hygienic-macros?)
+          (->box x)
+          (list (->orig-box 'quote) x))
+      x))
 
 (define (qq-expand x)
   (if (pair? x)
@@ -611,10 +613,7 @@
               (else
                 (list cons (qq-expand-pair c)
                            (qq-expand-pair (cdr x))))))
-          ;; TODO: maybe remove this
-      (if (null? x)
-          x
-          (qq-atom x))))
+      (qq-atom x)))
 
 ; (if)           -> nil
 ; (if x)         -> x
@@ -882,11 +881,14 @@
            (object-name x))))
 
 (define (nameit x y)
-  (when (or (procedure? y)
-            (tagged? y))
+        ; TODO: code duplication with macro?
+  (when (and (tagged? y)
+             (eq? (tagged-type y) 'mac))
     ; TODO: this uses symbols rather than boxes
     (hash-set! names y x))
-  y)
+  (if (procedure? y)
+      (procedure-rename y x)
+      y))
 
 (define (print-w/name x l m r port)
   (let ((x (->name x)))
@@ -1027,8 +1029,7 @@
     #f))
 
 (define (set-name n v)
-  (nameit n v)
-  (set-raw n v))
+  (set-raw n (nameit n v)))
 
 (define (set-sig n s v)
   ; TODO: this uses symbols rather than boxes
@@ -1181,7 +1182,7 @@
   (->orig-box 'andf)
   (->orig-box 'string)
 
-  (assign ->box #:sig (x) ->box)
+  (assign sym->box #:sig (x) ->box)
 
   (mac if args
     (cons nocompile (ac-if args)))
@@ -1502,7 +1503,7 @@
 
   ; Errors
   (assign details #:sig (e)        exn-message)
-  (assign err     #:sig (x . rest) error)
+  (assign err     #:sig (x . rest) error) ; raise-user-error
 
   (def on-err (errfn f)
     (with-handlers ((exn:fail? errfn)) (f))
@@ -1526,7 +1527,7 @@
 
   (def bound (x)
     (lookup x
-      (lambda () t)
+      (lambda (_) t)
       (lambda () nil)))
 
   (def uniq ((name 'g) (num nil))
