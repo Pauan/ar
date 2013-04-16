@@ -8,13 +8,14 @@
 
 (mac extend (name parms test . body)
   (w/uniq (args a b)
-    `(withs (,'orig  ,name
-             ,a      (fn ,parms ,test)
-             ,b      (fn ,(cons 'it parms) ,@body))
-       (= ,name (fn ,args
-                  (aif (apply ,a ,args)
-                       (apply ,b ,'it ,args)
-                       (apply ,'orig ,args)))))))
+    (w/sym (it orig)
+      `(withs (orig  ,name
+               ,a    (fn ,parms ,test)
+               ,b    (fn (it ,@parms) ,@body))
+         (= ,name (fn ,args
+                    (aif (apply ,a ,args)
+                         (apply ,b it ,args)
+                         (apply orig ,args))))))))
 
 #|(mac extend (name parms test . body)
   (w/uniq args
@@ -68,7 +69,8 @@
 
 
 (mac collect body
-  `(accum ,'yield ,@body))
+  (w/sym yield
+    `(accum yield ,@body)))
 
 
 #|(def debug args
@@ -140,7 +142,8 @@
 
 
 (mac %require args
-  `(% (,'namespace-require ,@(map (fn (x) (list 'quote x)) args))))
+  (w/sym namespace-require
+    `(% (namespace-require ,@(map (fn (x) (list 'quote x)) args)))))
 
 #|(mac require-rename args
   `((% namespace-require) ,@(map (fn ((x y))
@@ -159,7 +162,8 @@
       ,@(map cadr p))))
 
 (mac awith (parms . body)
-  `(rwith ,'self ,parms ,@body))
+  (w/sym self
+    `(rwith self ,parms ,@body)))
 
 (mac alet (x y . body)
   `(awith (,x ,y) ,@body))
@@ -211,7 +215,8 @@
 
 
 (mac awhile args
-  `(whilet ,'it ,@args))
+  (w/sym it
+    `(whilet it ,@args)))
 
 
 #|(mac w/stderr (var . body)

@@ -11,15 +11,15 @@
                 ,in  (if (isa ,in 'string)
                          (instring ,in)
                          ,in)
-                ,it  ,%.regexp-try-match)
+                it   ,%.regexp-try-match)
            (whenlet ,u ,match
-             (maplet ,it ,u
+             (maplet it ,u
                         ;; TODO: figure out how to get rid of this `if`
-               ,(let x `(if (,%.bytes? ,it)
-                            (,%.bytes->string/utf-8 ,it)
-                            ,it)
+               ,(let x `(if (,%.bytes? it)
+                            (,%.bytes->string/utf-8 it)
+                            it)
                   (if after
-                      `(let ,it ,after ,x)
+                      `(let it ,after ,x)
                       x)))))))))
 
 (def re-match (pattern (o in (stdin)))

@@ -133,11 +133,14 @@
 
 ; analogous to w/uniq, but is unhygienic rather than hygienic
 (mac w/sym (x . body)
-  `(let ,x ',x ,@body))
+  (if (acons x)
+      `(with ,(apply + nil (map1 (fn (x) `(,x ',x)) x))
+         ,@body)
+      `(let ,x ',x ,@body)))
 
 (mac afn (parms . body)
   (w/sym self
-    `(rfn ,self ,parms ,@body)))
+    `(rfn self ,parms ,@body)))
 
 (mac w/uniq (names . body)
   (if (acons names)
@@ -695,15 +698,15 @@
 
 (mac aif (expr . body)
   (w/sym it
-    `(let ,it ,expr
-       (if ,it
+    `(let it ,expr
+       (if it
            ,@(if (cddr body)
                  `(,(car body) (aif ,@(cdr body)))
                  body)))))
 
 (mac awhen (expr . body)
   (w/sym it
-    `(let ,it ,expr (if ,it (do ,@body)))))
+    `(let it ,expr (if it (do ,@body)))))
 
 (mac aand args
   (if (no args)
@@ -711,13 +714,14 @@
       (no (cdr args))
        (car args)
       (w/sym it
-        `(let ,it ,(car args) (and ,it (aand ,@(cdr args)))))))
+        `(let it ,(car args) (and it (aand ,@(cdr args)))))))
 
 (mac accum (accfn . body)
   (w/uniq gacc
-    `(withs (,gacc nil ,accfn [push ,'_ ,gacc])
-       ,@body
-       (rev ,gacc))))
+    (w/sym _
+      `(withs (,gacc nil ,accfn [push _ ,gacc])
+         ,@body
+         (rev ,gacc)))))
 
 ; Repeatedly evaluates its body till it returns nil, then returns vals.
 
@@ -903,8 +907,8 @@
       (w/uniq gs
         (w/sym index
           `(let ,gs ,s
-             (forlen ,index ,gs
-               (let ,var (,gs ,index)
+             (forlen index ,gs
+               (let ,var (,gs index)
                  ,@body)))))))
 
 ; (mac max2 (x y)
@@ -931,7 +935,8 @@
       (cons (car seq) (insert-sorted test elt (cdr seq)))))
 
 (mac insort (test elt seq)
-  `(zap [insert-sorted ,test ,elt ,'_] ,seq))
+  (w/sym _
+    `(zap [insert-sorted ,test ,elt _] ,seq)))
 
 (def reinsert-sorted (test elt seq)
   (if (no seq)
@@ -943,7 +948,8 @@
       (cons (car seq) (reinsert-sorted test elt (cdr seq)))))
 
 (mac insortnew (test elt seq)
-  `(zap [reinsert-sorted ,test ,elt ,'_] ,seq))
+  (w/sym _
+    `(zap [reinsert-sorted ,test ,elt _] ,seq)))
 
 ; Could make this look at the sig of f and return a fn that took the
 ; right no of args and didn't have to call apply (or list if 1 arg).
@@ -1523,12 +1529,12 @@
   (w/uniq (g p)
     (w/sym o
       `(ccc (fn (,g)
-              (let ,name (fn ((,o ,p)) (,g ,p))
+              (let ,name (fn ((o ,p)) (,g ,p))
                 ,@body))))))
 
 (mac catch body
   (w/sym throw
-    `(point ,throw ,@body)))
+    `(point throw ,@body)))
 
 (def downcase (x)
   (let downc (fn (c)
