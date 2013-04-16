@@ -50,6 +50,6 @@
                         interactive
                           (prn))))))
       (%.default-continuation-prompt-tag)
-      (fn args (repl)))))
-
-(repl)
+      (fn args (repl))))
+  (repl)
+)

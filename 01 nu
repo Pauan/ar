@@ -29,8 +29,8 @@
 
 (define filename         (make-parameter #f))
 
-(define hygienic-macros? (make-parameter #f))
-(define hyper-static?    (make-parameter #f))
+(define hygienic-macros? (make-parameter #t))
+(define hyper-static?    (make-parameter #t))
 
 (define import-cache     (make-parameter #f))
 (define import-dirs      (make-parameter null))
@@ -556,29 +556,6 @@
         v
         (macex v))))
 
-(define-syntax def
-  (syntax-rules ()
-    ((_ name parms #:sig sig . body)
-      (set-sig 'name 'sig (let ((name (lambda parms . body))) name)))
-    ((_ name parms . body)
-      (set-sig 'name 'parms (let ((name (lambda parms . body))) name)))))
-
-(define-syntax mac
-  (syntax-rules ()
-    ((_ name parms #:sig sig . body)
-      (set-sig 'name 'sig
-        (tagged 'mac (let ((name (lambda parms . body))) name))))
-    ((_ name parms . body)
-      (set-sig 'name 'parms
-        (tagged 'mac (let ((name (lambda parms . body))) name))))))
-
-(define-syntax assign
-  (syntax-rules ()
-    ((_ name #:sig sig value)
-      (set-sig 'name 'sig value))
-    ((_ name value)
-      (set-name 'name value))))
-
 ; qq-expand takes an Arc list containing a quasiquotation expression
 ; (the x in `x), and returns an Arc list containing Arc code.  The Arc
 ; code, when evaled by Arc, will construct an Arc list, the
@@ -607,9 +584,16 @@
                 (qq-expand-pair x))))
       (qq-atom x)))
 
+; TODO: probably shouldn't special-case quote... figure out another way?
+(define (qq-expand-quote c)
+  (list cons (qq-expand-pair (car c))
+             (parameterize ((hygienic-macros? #f))
+               (qq-expand-pair (cdr c)))))
+
 (define (qq-expand-pair x)
   (if (pair? x)
       (let ((c (car x)))
+              ;; TODO handle 'quote here too ?
         (cond ((and (orig-box? c 'unquote)
                     (null? (cddr x)))
                 (cadr x))
@@ -617,7 +601,10 @@
                     (null? (cddr x)))
                 (error "cannot use ,@ after ."))
               ((pair? c)
-                (cond ((orig-box? (car c) 'unquote)
+                (cond ((orig-box? (car c) 'quote)
+                        (list cons (qq-expand-quote c)
+                                   (qq-expand-pair (cdr x))))
+                      ((orig-box? (car c) 'unquote)
                         (list cons (cadr c)
                                    (qq-expand-pair (cdr x))))
                       ((orig-box? (car c) 'unquote-splicing)
@@ -954,6 +941,29 @@
 ;=============================================================================
 ;  Boxes
 ;=============================================================================
+(define-syntax def
+  (syntax-rules ()
+    ((_ name parms #:sig sig . body)
+      (set-sig 'name 'sig (let ((name (lambda parms . body))) name)))
+    ((_ name parms . body)
+      (set-sig 'name 'parms (let ((name (lambda parms . body))) name)))))
+
+(define-syntax mac
+  (syntax-rules ()
+    ((_ name parms #:sig sig . body)
+      (set-sig 'name 'sig
+        (tagged 'mac (let ((name (lambda parms . body))) name))))
+    ((_ name parms . body)
+      (set-sig 'name 'parms
+        (tagged 'mac (let ((name (lambda parms . body))) name))))))
+
+(define-syntax assign
+  (syntax-rules ()
+    ((_ name #:sig sig value)
+      (set-sig 'name 'sig value))
+    ((_ name value)
+      (set-name 'name value))))
+
 (define (set!-box name a b f)
   (let* ((b  (if (global? a)
                  (list nameit `(quote ,a) (ac b))
@@ -973,11 +983,13 @@
 (define (ac-var a b)
   (set!-box "var" a b
     (lambda (x)
-      (if (local?)
-          (let ((x (make-local-box x)))
-            (ac-fn-push (box-uniq x) #f)
-            x)
-          (make-global-box x)))))
+      (if (hyper-static?)
+          (if (local?)
+              (let ((x (make-local-box x)))
+                (ac-fn-push (box-uniq x) #f)
+                x)
+              (make-global-box x))
+          (->box x)))))
 
 (define (make-global-box x)
   (let ((r (make-box x (filename))))
@@ -1191,14 +1203,17 @@
   ;  Arc/Nu primitives
   ;===========================================================================
   (->orig-box 'fn)
-  (->orig-box 'quote)
   (->orig-box 'and)
-  (->orig-box 'no)
-  (->orig-box 'complement)
   (->orig-box 'compose)
-  (->orig-box 'get)
+  (->orig-box 'complement)
+  (->orig-box 'no)
   (->orig-box 'andf)
   (->orig-box 'string)
+  (->orig-box 'quote)
+  (->orig-box 'unquote)
+  (->orig-box 'unquote-splicing)
+  (->orig-box 'quasiquote)
+  (->orig-box 'get)
 
   (assign sym->box #:sig (x) ->box)
 
@@ -1260,9 +1275,9 @@
     (w/-maker body (lambda (old new)
       (hash-diff old new (lambda (key val)
         (set! old (hash-set old
-                  (string->symbol (string-append (->string x) ; TODO ?
-                                                 (->string key)))
-                  val))))
+                    (string->symbol (string-append (->string x) ; TODO ?
+                                                   (->string key)))
+                    val))))
       old)))
 
   ; TODO: re/im/export should probably eval its args

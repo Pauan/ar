@@ -5,21 +5,22 @@
 
 (mac w/re-matcher (vars match (o after))
   (w/uniq u
-    (let (p in) vars
-      `(with (,p   (regexp ,p)
-              ,in  (if (isa ,in 'string)
-                       (instring ,in)
-                       ,in)
-              it   %.regexp-try-match)
-         (whenlet ,u ,match
-           (maplet it ,u
-                      ;; TODO: figure out how to get rid of this `if`
-             ,(let x `(if %.bytes?.it
-                          %.bytes->string/utf-8.it
-                          it)
-                (if after
-                    `(let it ,after ,x)
-                    x))))))))
+    (w/sym it
+      (let (p in) vars
+        `(with (,p   (regexp ,p)
+                ,in  (if (isa ,in 'string)
+                         (instring ,in)
+                         ,in)
+                ,it  ,%.regexp-try-match)
+           (whenlet ,u ,match
+             (maplet ,it ,u
+                        ;; TODO: figure out how to get rid of this `if`
+               ,(let x `(if (,%.bytes? ,it)
+                            (,%.bytes->string/utf-8 ,it)
+                            ,it)
+                  (if after
+                      `(let ,it ,after ,x)
+                      x)))))))))
 
 (def re-match (pattern (o in (stdin)))
   (w/re-matcher (pattern in)

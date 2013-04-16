@@ -99,7 +99,7 @@
   (quit))
 
 (mac w/parse-args (x . args)
-  `(w/ script-arg-options %.hash-copy.script-arg-options
+  `(w/ script-arg-options (,%.hash-copy script-arg-options)
      (w/ script-arg-groups script-arg-groups
        (w/ script-arg-arguments script-arg-arguments
          (when script-register-help?

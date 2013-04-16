@@ -34,7 +34,7 @@
         (pr s)
       (let (l . r) s
         (if (caris (car r) '@)
-              (let res (join (flat:cdar r) (cdr r))
+              (let res (join (flat:cdr:car r) (cdr r))
                 (parse (cons l res) depth))
 
             (isa l 'cons)

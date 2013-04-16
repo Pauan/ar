@@ -17,7 +17,7 @@
     %.list->vector
     %.vector->list))
 
-(= script-src (car script-args))
+(var script-src (car script-args))
 (zap cdr script-args)
 
 
@@ -58,8 +58,8 @@
     (unless empty.x
       (aand converter.x %.path->string.it))))
 
-(= dirname  (make-path->string:compose %.path-only           expandpath))
-(= basename (make-path->string:compose %.file-name-from-path expandpath))
+(var dirname  (make-path->string:compose %.path-only           expandpath))
+(var basename (make-path->string:compose %.file-name-from-path expandpath))
 
 (def abspath args
   (let x (expandpath:apply string args)

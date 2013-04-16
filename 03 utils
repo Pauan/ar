@@ -1,10 +1,10 @@
-(mac redef (name parms . body)
+#|(mac redef (name parms . body)
   `(let ,'orig ,name
      (= ,name (fn ,parms ,@body))))
 
 (mac remac (name parms . body)
   `(let ,'orig (rep ,name)
-     (= ,name (annotate 'mac (fn ,parms ,@body)))))
+     (= ,name (annotate 'mac (fn ,parms ,@body)))))|#
 
 (mac extend (name parms test . body)
   (w/uniq (args a b)
@@ -78,14 +78,16 @@
 (mac w/ (x y . body)
   (w/uniq u
     `(let ,u nil
-       (%.dynamic-wind (fn () (= ,u ,x)
-                              (= ,x ,y))
-                       (fn () ,@body)
-                       (fn () (= ,x ,u))))))
+       (,%.dynamic-wind (fn () (= ,u ,x)
+                               (= ,x ,y))
+                        (fn () ,@body)
+                        (fn () (= ,x ,u))))))
 
-(remac do args
+#|(remac do args
   (cons %.nocompile
-    `(begin ,@(%.ac-all args))))
+    `(begin ,@(%.ac-all args))))|#
+
+(var list* %.list*)
 
 (mac parameter-var (x y)
   (w/uniq (val)
@@ -96,13 +98,14 @@
 
 (mac w/parameter (x y . body)
   (cons %.nocompile
-    `(parameterize ((,(%.ac x) ,(%.ac y)))
-       ,@(%.ac-all body))))
+    (list* 'parameterize
+           (list (list (%.ac x) (%.ac y)))
+           (%.ac-all body))))
 
 ; TODO
 (mac mode (x)
   (case x
-    nu `(do (%.hygienic-macros? #t)
+    nu `(do (,%.hygienic-macros? #t)
             ;(%.hyper-static? #t)
             nil)
        (err "invalid mode" x)))
@@ -132,16 +135,17 @@
            `(w/ ,',x ,,var ,@,body))
          ,x)))|#
 
+(def none (test seq)
+  (no (some test seq)))
+
 
 (mac %require args
-  `(% (namespace-require ,@(map (fn (x) `',x) args))))
+  `(% (,'namespace-require ,@(map (fn (x) (list 'quote x)) args))))
 
 #|(mac require-rename args
   `((% namespace-require) ,@(map (fn ((x y))
                                    `'(rename racket/base ,y ,x))
                                  pair.args)))|#
-
-(= list* %.list*)
 
 
 (def zip (x)
