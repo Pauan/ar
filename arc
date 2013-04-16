@@ -7,17 +7,20 @@
 (define all?   #f)
 (define debug? #f)
 (define repl?  #f)
+(define lang   "arc/3.1")
 
 (define arguments
   (command-line
     #:program "Arc/Nu"
     #:once-each
-    [("-a" "--all")   "Execute every file rather than only the first"
-                      (set! all? #t)]
-    [("-d" "--debug") "Turns debug mode on, causing extra messages to appear"
-                      (set! debug? #t)]
-    [("-i" "--repl")  "Always execute the repl"
-                      (set! repl? #t)]
+    [("-l" "--lang") x "Language to use"
+                       (set! lang x)]
+    [("-a" "--all")    "Execute every file rather than only the first"
+                       (set! all? #t)]
+    [("-d" "--debug")  "Turns debug mode on, causing extra messages to appear"
+                       (set! debug? #t)]
+    [("-i" "--repl")   "Always execute the repl"
+                       (set! repl? #t)]
     #:args args
     args))
 
@@ -26,15 +29,12 @@
     (current-command-line-arguments (list->vector arguments)))
 
 (define exec-dir  (path-only (normalize-path (find-system-path 'run-file))))
-(define exec-path (build-path exec-dir "01 nu"))
+(define exec-path (build-path exec-dir "compiler"))
 
 (parameterize ((current-namespace (make-base-namespace)))
   (namespace-require exec-path)
-  ((eval 'w/init) exec-dir exec-path
+  ((eval 'w/init) exec-dir exec-path lang #:debug debug?
     (lambda (ac-load)
-      #|(when debug?
-        (nu-eval (= debug? t)))|#
-
       (unless (null? arguments)
         (if all?
             (for ((x arguments))
@@ -42,7 +42,9 @@
             (ac-load (car arguments))))
 
       (when (or repl? (null? arguments))
-        (ac-load (build-path exec-dir "05 repl")))
+        (load (build-path exec-dir "repl"))
+        ;(namespace-require )
+        )
 
       ;; This is so that it doesn't print anything when exiting the REPL
       ; TODO is this necessary?

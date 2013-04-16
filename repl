@@ -1,0 +1,54 @@
+(require readline/readline)
+
+; TODO test that everything works
+
+;; http://arclanguage.org/item?id=10344
+(let ((interactive (terminal-port? (current-input-port))))
+  (define (print-err c)
+    (let ((msg (string-append "error: " (exn-message c))))
+      (if (debug?)
+          ; Displays the stack trace when debug? is t
+          ((error-display-handler) msg c) ; TODO: use error port
+          ;; http://arclanguage.org/item?id=10344
+          (displayln msg (current-error-port)))))
+
+  (when interactive
+    (dynamic-require 'readline/rep-start #f)
+    (set-completion-function!
+      (lambda (s)
+        (let ((s  (regexp (string-append "^" (regexp-quote s))))
+              (r  null))
+          (hash-for-each (globals)
+            (lambda (key _)
+              (let ((key (symbol->string key)))
+                (when (regexp-match? s key)
+                  (set! r (cons key r))))))
+          r))))
+
+  (let repl ()
+    ;; This causes Ctrl+C to return to the REPL, rather than aborting.
+    ;; Technique was taken from Racket's (read-eval-print-loop) which
+    ;; I found in /usr/share/racket/collects/racket/private/misc.ss
+    (call-with-continuation-prompt
+      (lambda ()
+        (let ((expr (if interactive
+                        ;; This is to make GNU readline work
+                        (let ((it ((current-prompt-read))))
+                          (if (syntax? it)
+                              (syntax->datum it)
+                              it))
+                        (sread (current-input-port) eof))))
+          (if (eof-object? expr)
+              (when interactive
+                (newline))
+              (begin (call-with-values
+                       (lambda ()
+                         (with-handlers ((exn:fail? print-err))
+                           (eval (ac expr))))
+                       (lambda results
+                         (when interactive
+                           (for-each (current-print) results))))
+                     ;; Abort to loop. (Calling `repl' directly would not be a tail call.)
+                     (abort-current-continuation (default-continuation-prompt-tag))))))
+      (default-continuation-prompt-tag)
+      (lambda () (repl)))))

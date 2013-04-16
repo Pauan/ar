@@ -1,25 +1,4 @@
-; Main Arc lib.  Ported to Scheme version Jul 06.
-
 ; don't like names of conswhen and consif
-
-; need better way of generating strings; too many calls to string
-;  maybe strings with escape char for evaluation
-; make foo~bar equiv of foo:~bar (in expand-ssyntax)
-; add sigs of ops defined in ac.scm
-; get hold of error types within arc
-; does macex have to be defined in scheme instead of using def below?
-; write disp, read, write in arc
-; could I get all of macros up into arc.arc?
-; warn when shadow a global name
-; some simple regexp/parsing plan
-
-; compromises in this implementation:
-; no objs in code
-;  (mac testlit args (listtab args)) breaks when called
-; separate string type
-;  (= (cdr (cdr str)) "foo") couldn't work because no way to get str tail
-;  not sure this is a mistake; strings may be subtly different from
-;  lists of chars
 
 (var = assign)
 

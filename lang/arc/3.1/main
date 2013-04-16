@@ -1,0 +1,417 @@
+(require ffi/unsafe)
+
+;===========================================================================
+;  Arc/Nu primitives
+;===========================================================================
+(assign sym->box #:sig (x) ->box)
+
+(mac if args
+  (cons nocompile (ac-if args)))
+
+(mac fn (parms . body)
+  (cons nocompile (ac-fn parms body)))
+
+(mac quasiquote (x)
+  (qq-expand x))
+
+(mac square-brackets body
+  `(,(->orig-box 'fn) (_) ,body))
+
+(mac % args
+  (cons nocompile
+    `(begin ,@args)))
+
+(mac assign (x . rest)
+  (cons nocompile
+    `(begin ,@(pairfn ac-assign (cons x rest)))))
+
+(mac var (x . rest)
+  (cons nocompile
+    `(begin ,@(pairfn ac-var (cons x rest)))))
+
+(mac get-setter (x get set)
+  (let ((x (->box x)))
+    (cons nocompile
+      `(begin (,set-box-get! ,x ,(ac get))
+              (,set-box-set! ,x ,(ac set))
+              ,(ac nil)))))
+
+(mac quote (x)
+  (let ((x (dottedrec sym->nil x)))
+    (cons nocompile `(quote ,x))))
+
+(mac w/exclude (x . body)
+  (w/-maker body (lambda (old new)
+    (for ((x x))
+      (set! new (w/exclude old new x)))
+    new)))
+
+(mac w/include (x . body)
+  (w/-maker body (lambda (old new)
+    (for ((x x))
+      (set! old (hash-set old x (hash-ref new x))))
+    old)))
+
+(mac w/rename (x . body)
+  (w/-maker body (lambda (old new)
+    (for ((x (->pair x)))
+      (set! new (hash-set new (cadr x) (hash-ref new (car x))))
+      (set! new (w/exclude old new (car x))))
+    new)))
+
+(mac w/prefix (x . body)
+  (w/-maker body (lambda (old new)
+    (hash-diff old new (lambda (key val)
+      (set! old (hash-set old
+                  (string->symbol (string-append (->string x) ; TODO ?
+                                                 (->string key)))
+                  val))))
+    old)))
+
+; TODO: re/im/export should probably eval its args
+(mac import args
+  (for ((x args))
+    (ac-load x))
+  nil)
+
+(mac export args
+  (for ((x args))
+    (ac-load x #:export #t))
+  nil)
+
+(mac reimport args
+  (for ((x args))
+    (ac-load x #:reimport #t))
+  nil)
+
+;(def %port-next-location)
+
+;(assign ref #:sig (x k (o d)) ref)
+;(def %symbol-global)
+
+;(assign close1 #:sig (x) close1)
+
+(def sym->filename (x)
+  (let ((x (->safe-box x)))
+    (if x
+        (box-file x)
+        nil)))
+
+(def call-w/stderr (port thunk)
+  (parameterize ((current-error-port port)) (thunk)))
+
+;===========================================================================
+;  Arc 3.1 primitives (97 total)
+;===========================================================================
+; Types
+;; TODO: a better argument name than typ
+(def annotate (typ rep)
+  (if (is? (type rep) typ)
+      rep
+      (tagged typ rep)))
+
+(assign type #:sig (x) type)
+
+(def rep (x)
+  (if (tagged? x)
+      (tagged-rep x)
+      x))
+
+(assign coerce #:sig (x to (o base 10)) coerce)
+
+; Conses
+(assign nil nil)
+(assign cons #:sig (x y) cons)
+(assign car  #:sig (x)   ac-car)
+(assign cdr  #:sig (x)   ac-cdr)
+
+(def scar (p x)
+  (cond ((pair? p)    (unsafe-set-mcar! p x))
+        ((string? x)  (string-set! p 0 x))
+        (else         (raise-type-error 'scar "cons" p)))
+  x)
+
+(def scdr (p x)
+  (cond ((pair? p)    (unsafe-set-mcdr! p x))
+        ((string? x)  (error "can't set cdr of a string" x))
+        (else         (raise-type-error 'scdr "cons" p)))
+  x)
+
+; Comparison
+(assign is #:sig args (make-pairwise is?))
+(assign <  #:sig args (make-pairwise (make-comparer < string<? char<?)))
+(assign >  #:sig args (make-pairwise (make-comparer > string>? char>?)))
+
+; Numbers
+(assign -     #:sig args      -)
+(assign *     #:sig args      *)
+(assign /     #:sig args      /)
+(assign sin   #:sig (x)       sin)
+(assign cos   #:sig (x)       cos)
+(assign tan   #:sig (x)       tan)
+(assign asin  #:sig (x)       asin)
+(assign acos  #:sig (x)       acos)
+(assign atan  #:sig (x (o y)) atan)
+(assign log   #:sig (x)       log) ;; logarithm
+(assign mod   #:sig (x y)     modulo)
+(assign expt  #:sig (x y)     expt)
+(assign sqrt  #:sig (x)       sqrt)
+
+(def exact (x) (tnil (exact-integer? x))) ;; TODO: bad name
+
+(assign + #:sig args (make-reduce ac-+ 0))
+
+(def trunc (x)
+  (inexact->exact (truncate x)))
+
+; Streams
+(assign sread     #:sig (p eof)                sread)
+(assign outstring #:sig ((o name 'string))     open-output-string)
+(assign instring  #:sig (str (o name 'string)) open-input-string)
+(assign inside    #:sig (out)                  get-output-string)
+(assign stdin     #:sig ((o in))               current-input-port)  ; should be a vars
+(assign stdout    #:sig ((o out))              current-output-port)
+(assign stderr    #:sig ((o err))              current-error-port)
+(assign readc     #:sig ((o in (stdin)))       (make-read read-char))
+(assign readb     #:sig ((o in (stdin)))       (make-read read-byte))
+(assign peekc     #:sig ((o in (stdin)))       (make-read peek-char))
+(assign writec    #:sig (c (o out (stdout)))   (make-write write-char))
+(assign writeb    #:sig (c (o out (stdout)))   (make-write write-byte))
+(assign write     #:sig (x (o out (stdout)))   (make-print write))
+(assign disp      #:sig (x (o out (stdout)))   (make-print display))
+
+(def close args
+  (for ((x args)) (close1 x))
+  (for ((x args)) (try-custodian x)) ;; free any custodian
+  nil)
+
+(def infile (path (mode 'binary))
+      #:sig (path (o mode 'binary))
+  (open-input-file path #:mode mode))
+
+(def outfile (path (mode 'truncate))
+       #:sig (path (o mode 'truncate))
+  (open-output-file path #:mode 'text #:exists mode))
+
+(def call-w/stdin (port thunk)
+  (parameterize ((current-input-port port)) (thunk)))
+
+(def call-w/stdout (port thunk)
+  (parameterize ((current-output-port port)) (thunk)))
+
+(def open-socket (num)
+  (tcp-listen num 50 #t))
+
+(def socket-accept (s)
+  (let ((oc  (current-custodian))
+        (nc  (make-custodian)))
+    (current-custodian nc)
+    (call-with-values
+      (lambda () (tcp-accept s))
+      (lambda (in out)
+        (let ((in1 (make-limited-input-port in 100000 #t)))
+          (current-custodian oc)
+          (associate-custodian nc in1 out)
+          (list in1
+                out
+                (let-values (((us them) (tcp-addresses out))) them)))))))
+
+;; TODO: should pipe call ((caddddr x) 'wait)?
+(def pipe-from (cmd)
+         ;; TODO: destructuring
+  (let* ((x   (process/ports #f #f (current-error-port) cmd))
+         (in  (car x))
+         (out (cadr x)))
+    ;; Racket docs say I need to close all 3 ports explicitly,
+    ;; but the err port doesn't need to be closed, because it's
+    ;; redirected to stderr
+    (close-output-port out)
+    in))
+
+(def client-ip (port)
+  (let-values (((x y) (tcp-addresses port))) y))
+
+; Added because Mzscheme buffers output.  Not a permanent part of Arc.
+; Only need to use when declare explicit-flush optimization.
+(def flushout ()
+  (flush-output)
+  t)
+
+(def force-close args
+  (for ((p args))
+    ;; TODO: force-close1
+    (when (not (try-custodian p))
+      (close1 p)))
+  nil)
+
+; OS
+;; allow Arc to give up root privileges after it calls open-socket.
+;; thanks, Eli!
+(assign setuid #:sig (i) (get-ffi-obj 'setuid #f (_fun _int -> _int)))
+
+;: TODO: need to use a better seed (Arc 3.1???)
+(assign rand                         #:sig ((o n) (o gen)) random)
+(assign quit                         #:sig ((o n 0))       exit)
+(assign msec                         #:sig ()              current-milliseconds)
+(assign current-gc-milliseconds      #:sig ()              current-gc-milliseconds)
+(assign current-process-milliseconds #:sig (x)             current-process-milliseconds)
+(assign memory                       #:sig ((o custodian)) current-memory-use)
+(assign seconds                      #:sig ()              current-seconds)
+
+;; Will system "execute" a half-finished string if thread killed in the
+;; middle of generating it?
+(def system (command) (system command) nil)
+(def rmfile (path)    (delete-file path) nil)
+
+(def file-exists (x) (tnil (file-exists? x)))
+(def dir-exists  (x) (tnil (directory-exists? x)))
+
+;; TODO: better dir
+(def dir (name)
+  (map path->string (directory-list name)))
+
+(def mvfile (old new (flag t))
+      #:sig (old new (o flag t))
+  (rename-file-or-directory old new (true? flag))
+  nil)
+
+(def timedate ((sec (current-seconds)))
+        #:sig ((o sec (seconds)))
+  (let ((d (seconds->date sec)))
+    (list (date-second d)
+          (date-minute d)
+          (date-hour d)
+          (date-day d)
+          (date-month d)
+          (date-year d))))
+
+; Continuations
+(assign ccc #:sig (f (o prompt)) call-with-current-continuation)
+
+; Errors
+(assign err #:sig (x . rest) error) ; raise-user-error
+
+(def on-err (errfn f)
+  (with-handlers ((exn:fail? errfn)) (f))
+  ;; TODO: why does Arc 3.1 implement it like this?
+  #|((call-with-current-continuation
+     (lambda (k)
+       (lambda ()
+         (with-handlers ((exn:fail? (lambda (e)
+                                      (k (lambda () (errfn e))))))
+                        (f))))))|#
+  )
+
+; Symbols
+(def bound (x)
+  (lookup x
+    (lambda (_) t)
+    (lambda () nil)))
+
+(def uniq ((name 'g) (num nil))
+    #:sig ((o name 'g) (o num))
+  (when (false? num)
+    (set! num (uniq-counter))
+    (uniq-counter (+ (uniq-counter) 1)))
+  (string->uninterned-symbol
+    (string-append (coerce name 'string)
+                   (coerce num  'string))))
+
+; Other
+(assign t t)
+(assign newstring #:sig (n (o c #\nul)) make-string)
+
+;; Later may want to have multiple indices.
+(def sref (x val key)
+  (cond ((hash? x)    (if (false? val)
+                          (hash-remove! x key)
+                          (hash-set! x key val)))
+        ((string? x)  (string-set! x key val))
+        ((pair? x)    (unsafe-set-mcar! (list-tail x key) val))
+        (else         (error "can't set reference " x key val)))
+  val)
+
+(def len (x)
+  (cond ((string? x)  (string-length x))
+        ((hash? x)    (hash-count x))
+        (else         (length x))))
+
+(def eval (expr)
+  (eval (ac expr)))
+
+(def apply (f . args)
+  ; TODO; is this inefficient?
+  (apply apply call f args))
+
+
+
+; Threads
+(assign new-thread     #:sig (thunk) thread)
+(assign kill-thread    #:sig (x)     kill-thread)
+(assign break-thread   #:sig (x)     break-thread)
+(assign current-thread #:sig ()      current-thread)
+
+(def sleep args #:sig ((o sec 0)) (apply sleep args) nil)
+
+(def dead (x) (tnil (thread-dead? x)))
+
+;; TODO: make this better
+(def atomic-invoke (f)
+  (if (thread-cell-ref sema-cell)
+      ;; TODO: why are these call...?
+      (call f)
+      (begin (thread-cell-set! sema-cell #t)
+             (dynamic-wind (lambda () #t)
+                           (lambda ()
+                             (call-with-semaphore
+                               the-sema
+                               (lambda () (call f))))
+                           (lambda ()
+                             (thread-cell-set! sema-cell #f))))))
+
+; Continuations
+(def protect (during after)
+  (dynamic-wind (lambda () #t) during after))
+
+; Tables
+(def table ((init nil))
+     #:sig ((o init))
+  (let ((h (make-hash)))
+    (when (true? init)
+      (init h))
+    h))
+
+(def maptable (fn table)
+  (hash-for-each table fn) ; arg is (fn (key value) ...)
+  table)
+
+; Errors
+(assign details #:sig (e) exn-message)
+
+; Symbols
+(assign macex1 #:sig (e) macex1)
+(assign macex  #:sig (e) macex)
+
+(def ssyntax (x) (tnil (ssyntax? x)))
+
+(def ssexpand (x)
+  (if (symbol? x) (ssexpand x) x))
+
+; Other
+(assign sig sig)
+
+(def declare (key val)
+  (let ((flag (true? val)))
+    (case key
+      ((atstrings)      (atstrings      flag))
+      ((direct-calls)   (direct-calls   flag))
+      ;((inline-calls)   (set! inline-calls   flag))
+      ((explicit-flush) (explicit-flush flag))
+      (else             (warn "invalid declare mode " key)))
+    val))
+
+
+(define (path x)
+  (build-path (current-load-relative-directory) x))
+
+(ac-load (path "arc.arc") #:export #t)
