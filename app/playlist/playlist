@@ -186,17 +186,17 @@
 ; TODO: ->sxml has to be run before w/ cwd
 (let output cadr.script-args
   (zap todir output)
-  (let all dirall-ext.filetypes
-    (let all (->sxml "All" all)
-      (w/ cwd output
-        (w/outfile out "All.xspf"
-          (disp all out)))
-      (each (k v) files
-        (iflet v process-file.k
-          (let v (->sxml k v)
-            (debug "writing to \"" output k ".xspf\"")
-            (w/ cwd output
-              (w/outfile out (+ k ".xspf")
-                (disp v out))))
-          (debug "ignoring playlist \"" k "\" because it is empty"))))
-))
+  (withs (all  dirall-ext.filetypes
+          all  (->sxml "All" all))
+    (w/ cwd output
+      (w/outfile out "All.xspf"
+        (disp all out))))
+  (each (k v) files
+    (iflet v process-file.k
+      (let v (->sxml k v)
+        (debug "writing to \"" output k ".xspf\"")
+        (w/ cwd output
+          (w/outfile out (+ k ".xspf")
+            (disp v out))))
+      (debug "ignoring playlist \"" k "\" because it is empty")))
+)

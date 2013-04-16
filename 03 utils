@@ -99,6 +99,14 @@
     `(parameterize ((,(%.ac x) ,(%.ac y)))
        ,@(%.ac-all body))))
 
+; TODO
+(mac mode (x)
+  (case x
+    nu `(do (%.hygienic-macros? #t)
+            ;(%.hyper-static? #t)
+            nil)
+       (err "invalid mode" x)))
+
 (var debug? nil)
 
 (def debug args

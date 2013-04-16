@@ -29,8 +29,8 @@
 
 (define filename         (make-parameter #f))
 
-(define hygienic-macros? (make-parameter #t))
-(define hyper-static?    (make-parameter #t))
+(define hygienic-macros? (make-parameter #f))
+(define hyper-static?    (make-parameter #f))
 
 (define import-cache     (make-parameter #f))
 (define import-dirs      (make-parameter null))
@@ -39,6 +39,7 @@
 (define locals           (make-parameter (hasheq)))
 
 (define orig-globals     (make-parameter #f))
+(define exported-globals (make-parameter #f))
 (define globals          (make-parameter (hasheq)))
 
 (define ac-fn-let*       (make-parameter #f))
@@ -99,6 +100,27 @@
   (if (hash-has-key? hash key)
       (yes hash (hash-ref hash key))
       (no hash)))
+
+(define (hash-merge to from)
+  (hash-for-each from
+    (lambda (key val)
+      (set! to (hash-set to key val))))
+  to)
+
+(define (hash-merge! to from)
+  (hash-for-each from
+    (lambda (key val)
+      (hash-set! to key val))))
+
+(define (hash-different? old key val)
+  (or (not (hash-has-key? old key))
+      (not (eq? (hash-ref old key) val))))
+
+(define (hash-diff old new f)
+  (hash-for-each new
+    (lambda (key val)
+      (when (hash-different? old key val)
+        (f key val)))))
 
 (define (fraction? x)
   (and (number? x)
@@ -639,11 +661,10 @@
                  (filename (path->string path))
                  (globals (globals))
                  (import-cache (make-hash))
-                 (import-dirs (list* (path->string (build-path dir "lib"))
+                 (import-dirs (list* (path->string (current-directory)) ; TODO
+                                     (path->string (build-path dir "lib"))
                                      (import-dirs)))
                  (orig-globals (make-hasheq))
-                 (hyper-static? #f)
-                 (hygienic-macros? #f)
                  (compile-allow-set!-undefined #t))
     (init)
     ;; These files have Arc/Nu's dir prefixed to them
@@ -692,7 +713,7 @@
         (resolve-path
           (path->complete-path (expand-user-path x) y))))))
 
-(define (find-filename p dir file none)
+(define (find-filename p dir file)
   (let self ((x (import-dirs)))
     (if (pair? x)
         (let ((p (abspath p (car x))))
@@ -702,12 +723,15 @@
               (exists? (string-append p ".arc") dir file
                 (lambda ()
                   (self (cdr x)))))))
-        (none p))))
+        (error (string-append "file \"" p "\" was not found")))))
 
 (define (load-file p)
   (parameterize ((filename p)
                  (import-dirs (cons (path-only p) ; TODO: is this good?
-                                    (import-dirs))))
+                                    (import-dirs)))
+                 (hyper-static? (hyper-static?))
+                 (hygienic-macros? (hygienic-macros?))
+                 (exported-globals (make-hasheq)))
     (let ((old (globals)))
       (call-with-input-file p
         (lambda (x)
@@ -718,32 +742,30 @@
                   ;       maybe, rather than using a table, use a list of
                   ;       functions, each of which sets or removes from the
                   ;       global hash table
-                  (let ((new (make-hasheq)))
-                    (hash-diff old (globals) (lambda (key val)
-                      (hash-set! new key val)))
+                  (let ((new (exported-globals)))
+                    (globals (hash-merge old new))
                     new)
                   (begin (eval (ac x))
                          (self))))))))))
 
-(define (ac-load p [reimport? #f])
+(define (ac-load p #:reimport [reimport #f]
+                   #:export   [export   #f])
   (find-filename (->string p)
     (lambda (p)
       (import-dirs (cons p (import-dirs))))
     (lambda (p)
-      (if reimport?
+      (if reimport
           (hash-set! (import-cache) p (load-file p))
           (hash-if-key (import-cache) p
             (lambda (x y)
-              (let ((hash (globals)))
-                (hash-for-each y
-                  (lambda (key val)
-                    (set! hash (hash-set hash key val))))
-                (globals hash)))
+              (globals (hash-merge (globals) y)))
             (lambda (x)
               (hash-set! x p (load-file p)))))
-      (void))
-    (lambda (p)
-      (error (string-append "file \"" p "\" was not found")))))
+      (when export
+        (let ((hash (exported-globals)))
+          (when hash
+            (hash-merge! hash (hash-ref (import-cache) p)))))
+      (void))))
 
 ;=============================================================================
 ;  fn
@@ -960,6 +982,9 @@
 (define (make-global-box x)
   (let ((r (make-box x (filename))))
     (globals (hash-set (globals) x r))
+    (let ((hash (exported-globals)))
+      (when hash
+        (hash-set! hash x r)))
     r))
 
 (define (make-local-box x)
@@ -1048,13 +1073,6 @@
   (if (hash-has-key? old x)
       (hash-set new x (hash-ref old x))
       (hash-remove new x)))
-
-(define (hash-diff old new f)
-  (hash-for-each new
-    (lambda (key val)
-      (when (or (not (hash-has-key? old key))
-                (not (eq? (hash-ref old key) val)))
-        (f key val)))))
 
 ;=============================================================================
 ;  ssyntax
@@ -1242,20 +1260,25 @@
     (w/-maker body (lambda (old new)
       (hash-diff old new (lambda (key val)
         (set! old (hash-set old
-                    (string->symbol (string-append (->string x) ; TODO ?
-                                                   (->string key)))
-                    val))))
+                  (string->symbol (string-append (->string x) ; TODO ?
+                                                 (->string key)))
+                  val))))
       old)))
 
-  ; TODO: re/import should probably eval its args
+  ; TODO: re/im/export should probably eval its args
   (mac import args
     (for ((x args))
       (ac-load x))
     nil)
 
+  (mac export args
+    (for ((x args))
+      (ac-load x #:export #t))
+    nil)
+
   (mac reimport args
     (for ((x args))
-      (ac-load x #t))
+      (ac-load x #:reimport #t))
     nil)
 
   ;(def %port-next-location)

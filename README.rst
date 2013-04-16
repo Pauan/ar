@@ -15,7 +15,7 @@ You can also use ``./arc foo`` to load the Arc file ``foo.arc``.
 
 This also means that the ``arc`` executable is suitable for writing shell scripts::
 
-    #! /path/to/arc
+    #! /usr/bin/env arc
     (prn "foo")
 
 Use ``./arc -h`` to see all the available options.
@@ -29,7 +29,7 @@ Arc/Nu is Arc 3.1 but *bettar*. It includes bug fixes, new features, additional 
 * ``01 nu`` is the Arc/Nu compiler
 * ``02 arc`` is copied unmodified from Arc 3.1
 * ``03 utils`` contains generic utilities
-* ``04 paths`` contains functions for inspecting and manipulating paths
+* ``04 paths`` contains functions for inspecting and manipulating file paths
 * ``05 repl`` implements a REPL
 * ``arc`` is an executable that will load the above files in order
 
@@ -43,6 +43,14 @@ So, why would you want to use it over Arc 3.1 or Anarki?
   in Arc/Nu than in Arc 3.1, last time I checked.
 
 * Arc/Nu uses boxes internally. This means you get an awesome namespace system (using the ``w/include``, ``w/exclude``, ``w/rename``, and ``w/prefix`` macros). You can also turn on hyper-static scope and hygienic macros.
+
+* Includes an ``import`` macro which makes it significantly easier to load files::
+
+    ; Arc 3.1
+    (load "/path/to/foo.arc")
+
+    ; Arc/Nu
+    (import foo)
 
 * The REPL is implemented **substantially** better:
 
@@ -76,7 +84,7 @@ So, why would you want to use it over Arc 3.1 or Anarki?
 
 * You can use the ``arc`` executable to write shell scripts::
 
-      #! /path/to/arc
+      #! /usr/bin/env arc
       (prn "foo")
 
   This is like ``arc.sh`` in Anarki but implemented in Racket rather than as a
@@ -84,9 +92,9 @@ So, why would you want to use it over Arc 3.1 or Anarki?
 
   In addition, it supports common Unix idioms such as::
 
-      $ /path/to/arc < foo.arc
-      $ echo "(+ 1 2)"       | /path/to/arc
-      $ echo "(prn (+ 1 2))" | /path/to/arc
+      $ arc < foo.arc
+      $ echo "(+ 1 2)"       | arc
+      $ echo "(prn (+ 1 2))" | arc
 
   This idea is courtesy of `this thread <http://arclanguage.org/item?id=10344>`_
 

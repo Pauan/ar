@@ -41,7 +41,7 @@ New Features
 
 * The following Arc macros are defined::
 
-    % assign curly-brackets fn get-setter if import quasiquote quote reimport square-brackets var w/exclude w/include w/prefix w/rename
+    % assign curly-brackets export fn get-setter if import quasiquote quote reimport square-brackets var w/exclude w/include w/prefix w/rename
 
 * The following Arc functions are defined::
 
