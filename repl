@@ -47,7 +47,11 @@
                            (eval (ac expr))))
                        (lambda results
                          (when interactive
-                           (for-each (current-print) results))))
+                           (for ((x results))
+                             (unless (void? x)
+                               (print write x (current-output-port))))
+                           ;(for-each (current-print) results)
+                           )))
                      ;; Abort to loop. (Calling `repl' directly would not be a tail call.)
                      (abort-current-continuation (default-continuation-prompt-tag))))))
       (default-continuation-prompt-tag)

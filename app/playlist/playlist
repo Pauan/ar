@@ -1,6 +1,4 @@
-#! /usr/bin/env arc
-
-(import nuit/nuit-parse
+(import nuit/parse
         parse-script-args
         strings ; Only needed for urlencode-path
         sxml)
@@ -9,13 +7,14 @@
 (var folders    nil)
 
 (var version      "2.0"
-     options      (obj)
+     options      {}
 
      strings      nil
      errors       nil
-     files        (obj)
+     files        {}
 
-     filetypes    '(flac flv mid mkv mp3 mp4 ogg ogm wav webm wma)
+     filetypes    ["flac" "flv" "mid" "mkv"  "mp3" "mp4"
+                   "ogg"  "ogm" "wav" "webm" "wma"]
 
      script-args  (w/parse-args script-args
                     ("-v" "--version" ()

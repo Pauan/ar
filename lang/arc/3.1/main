@@ -1,108 +1,474 @@
+#lang racket/base
+
+(provide (all-defined-out))
+
+(require (only-in "../../../compiler" ac-read ac-string ac nil dottedrec sym->nil ac-ssexpand macro? nocompile ac-mac-call ac-fn-call ac-all set-name tagged? tagged-type tagged ac-if ac-fn ac-quasiquote ac-assign ac-quote tagged-rep ac-car ac-cdr make-pairwise make-comparer tnil make-reduce make-read make-write t true? lookup false? uniq-counter call warn ac-load rel-path
+
+% w/include w/exclude w/rename w/prefix import export reimport
+
+->orig-box orig-box?))
+
 (require ffi/unsafe)
+(require racket/unsafe/ops)
+(require racket/tcp)
+(require racket/port)
+(require racket/system)
 
-;===========================================================================
-;  Arc/Nu primitives
-;===========================================================================
-(assign sym->box #:sig (x) ->box)
+;=============================================================================
+;  atstrings
+;=============================================================================
+(define atstrings (make-parameter #f))
 
-(mac if args
-  (cons nocompile (ac-if args)))
+(define (unescape-ats s)
+  (list->string (let self ((cs (string->list s)))
+                  (cond ((null? cs)
+                          cs)
+                        ((and (eqv? (car cs) #\@)
+                              (not (null? (cdr cs)))
+                              (eqv? (cadr cs) #\@))
+                          (self (cdr cs)))
+                        (else
+                          (cons (car cs) (self (cdr cs))))))))
 
-(mac fn (parms . body)
-  (cons nocompile (ac-fn parms body)))
+; First unescaped @ in s, if any.  Escape by doubling.
+(define (atpos s i)
+         ;; TODO: shouldn't this use = ?
+  (cond ((eqv? i (string-length s))
+          #f)
+        ((eqv? (string-ref s i) #\@)
+          (if (and (< (+ i 1) (string-length s))
+                   (not (eqv? (string-ref s (+ i 1)) #\@)))
+              i
+              (atpos s (+ i 2))))
+        (else
+          (atpos s (+ i 1)))))
 
-(mac quasiquote (x)
-  (qq-expand x))
+(define (codestring s)
+  (let ((i (atpos s 0)))
+    (if i  (cons (substring s 0 i)
+                 (let* ((rest (substring s (+ i 1)))
+                        (in   (open-input-string rest))
+                        (expr ((ac-read) in))
+                        (i2   (let-values (((x y z) (port-next-location in))) z)))
+                   (close-input-port in)
+                   (cons expr (codestring (substring rest (- i2 1))))))
+           (list s))))
 
+(ac-string (lambda (s)
+  (if (atstrings)
+      (if (atpos s 0)
+          (ac (cons (->orig-box 'string)
+                    (map (lambda (x)
+                           (if (string? x)
+                               (unescape-ats x)
+                               x))
+                         (codestring s))))
+          (unescape-ats s))
+      ;; This is for normal strings
+      (string-copy s))))
+
+;=============================================================================
+;  I/O
+;=============================================================================
+(define explicit-flush (make-parameter #f))
+
+(define (make-print f)
+  (lambda (x (out (current-output-port)))
+    (print f x out)
+    (unless (explicit-flush) (flush-output out))
+    nil))
+
+(define (read-from-string str)
+  (let* ((port  (open-input-string str))
+         (val   ((ac-read) port)))
+    (close-input-port port)
+    val))
+
+;; TODO: not exposed to Arc, but maybe should be
+(define (close1 p)
+  (cond ((input-port? p)    (close-input-port p))
+        ((output-port? p)   (close-output-port p))
+        ((tcp-listener? p)  (tcp-close p))
+        (else               (error "can't close " p))))
+
+; sread = scheme read. eventually replace by writing read
+(define (sread p eof)
+  (let ((expr (read p)))
+    (if (eof-object? expr)
+        eof
+        (dottedrec sym->nil expr)))) ; TODO: why does this call sym->nil?
+
+(ac-read (lambda (x) (sread x eof)))
+
+;=============================================================================
+;  Atomic thread stuff
+;=============================================================================
+; make sure only one thread at a time executes anything
+; inside an atomic-invoke. atomic-invoke is allowed to
+; nest within a thread; the thread-cell keeps track of
+; whether this thread already holds the lock.
+(define the-sema  (make-semaphore 1))
+(define sema-cell (make-thread-cell #f))
+
+; there are two ways to close a TCP output port.
+; (close o) waits for output to drain, then closes UNIX descriptor.
+; (force-close o) discards buffered output, then closes UNIX desc.
+; web servers need the latter to get rid of connections to
+; clients that are not reading data.
+; mzscheme close-output-port doesn't work (just raises an error)
+; if there is buffered output for a non-responsive socket.
+; must use custodian-shutdown-all instead.
+(define custodians (make-hash))
+
+(define (associate-custodian c i o)
+  (hash-set! custodians i c)
+  (hash-set! custodians o c))
+
+; if a port has a custodian, use it to close the port forcefully.
+; also get rid of the reference to the custodian.
+; sadly doing this to the input port also kills the output port.
+(define (try-custodian p)
+  (let ((c (hash-ref custodians p #f)))
+    (if c (begin (custodian-shutdown-all c)
+                 (hash-remove! custodians p)
+                 #t)
+          #f)))
+
+;=============================================================================
+;  ssyntax
+;=============================================================================
+; Though graphically the right choice, can't use _ for currying
+; because then _!foo becomes a function.  Maybe use <>.  For now
+; leave this off and see how often it would have been useful.
+
+; Might want to make ~ have less precedence than &, because
+; ~foo&bar prob should mean (andf (complement foo) bar), not
+; (complement (andf foo bar)).
+(define (symbol->chars x) (string->list (symbol->string x)))
+
+;; TODO: why does this count backwards...? efficiency, maybe?
+(define (has-ssyntax-char? string i)
+  (and (>= i 0)
+       (or (let ((c (string-ref string i)))
+             (or (eqv? c #\:) (eqv? c #\~)
+                 (eqv? c #\&)
+                 ;(eqv? c #\_)
+                 (eqv? c #\.)  (eqv? c #\!)))
+           (has-ssyntax-char? string (- i 1)))))
+
+(define (tokens test source token acc keepsep?)
+  (cond ((null? source)
+          (reverse (if (pair? token)
+                       (cons (reverse token) acc)
+                       acc)))
+        ((test (car source))
+          (tokens test
+                  (cdr source)
+                  null
+                  (let ((rec (if (null? token)
+                                 acc
+                                 (cons (reverse token) acc))))
+                    (if keepsep?
+                        (cons (car source) rec)
+                        rec))
+                  keepsep?))
+        (else
+          (tokens test
+                  (cdr source)
+                  (cons (car source) token)
+                  acc
+                  keepsep?))))
+
+(define (ssyntax? x)
+  (and (symbol? x)
+       ;(not (or (eq? x '+) (eq? x '++) (eq? x '_)))
+       (let ((name (symbol->string x)))
+         (has-ssyntax-char? name (- (string-length name) 1)))))
+
+(define (chars->value chars) (read-from-string (list->string chars)))
+(define (insym? char sym) (member char (symbol->chars sym)))
+
+(define (expand-compose sym)
+  (let ((elts (map (lambda (tok)
+                     (if (eqv? (car tok) #\~)
+                         (if (null? (cdr tok))
+                             (->orig-box 'no)
+                             (list (->orig-box 'complement) (chars->value (cdr tok))))
+                         (chars->value tok)))
+                   (tokens (lambda (c) (eqv? c #\:))
+                           (symbol->chars sym)
+                           null
+                           null
+                           #f))))
+    (if (null? (cdr elts))
+        (car elts)
+        (cons (->orig-box 'compose) elts))))
+
+(define (build-sexpr toks orig)
+  (cond ((null? toks)
+          (->orig-box 'get))
+        ((null? (cdr toks))
+          (chars->value (car toks)))
+        (else
+          (list (build-sexpr (cddr toks) orig)
+                (if (eqv? (cadr toks) #\!)
+                    (list (->orig-box 'quote) (chars->value (car toks)))
+                    (if (or (eqv? (car toks) #\.) (eqv? (car toks) #\!))
+                        (error "bad ssyntax" orig)
+                        (chars->value (car toks))))))))
+
+(define (expand-and sym)
+  (let ((elts (map chars->value
+                   (tokens (lambda (c) (eqv? c #\&))
+                           (symbol->chars sym)
+                           null
+                           null
+                           #f))))
+    (if (null? (cdr elts))
+        (car elts)
+        (cons (->orig-box 'andf) elts))))
+
+(define (expand-sexpr sym)
+  (build-sexpr (reverse (tokens (lambda (c) (or (eqv? c #\.) (eqv? c #\!)))
+                                (symbol->chars sym)
+                                null
+                                null
+                                #t))
+               sym))
+
+;; TODO: better definition of ssexpand
+(define (ssexpand sym)
+  (cond ((or (insym? #\: sym) (insym? #\~ sym))  (expand-compose sym))
+        ((or (insym? #\. sym) (insym? #\! sym))  (expand-sexpr sym))
+        ((insym? #\& sym)                        (expand-and sym))
+        (else                                    (error "unknown ssyntax" sym))))
+
+(ac-ssexpand (lambda (x)
+  (if (ssyntax? x)
+      (ssexpand x)
+      x)))
+
+;=============================================================================
+;  Macro/function stuff
+;=============================================================================
+(define (macex1 e)
+  (if (pair? e)
+      (macro? (car e)
+        (lambda (x)
+          (let ((x (apply x (cdr e))))
+            (if (eq? (car x) nocompile)
+                e
+                x)))
+        (lambda () e))
+      e))
+
+(define (macex e)
+  (let ((v (macex1 e)))
+    (if (eq? v e)
+        v
+        (macex v))))
+
+;; the next two are optimizations, except work for macros.
+(define (de-compose fns args)
+        ;; TODO: is this needed anywhere in Arc or can I remove it...?
+  (if ;(null? fns)       `((fn vals (car vals)) ,@args)
+      (null? (cdr fns)) (cons (car fns) args)
+                        (list (car fns) (de-compose (cdr fns) args))))
+
+(define (de-andf f args)
+  (let ((gs (map (lambda (x) (gensym)) args)))
+    `((,(->orig-box 'fn) ,gs
+        (,(->orig-box 'and) ,@(map (lambda (f) (cons f gs))
+                                   (cdr f))))
+      ,@args)))
+
+(ac-mac-call (lambda (c f args done)
+  (cond ((orig-box? c 'compose)
+          (ac (de-compose (cdr f) args)))
+        ((orig-box? c 'complement)
+          (ac (list (->orig-box 'no) (cons (cadr f) args))))
+        ((orig-box? c 'andf)
+          (ac (de-andf f args)))
+        (else
+          (done)))))
+
+(define direct-calls (make-parameter #f))
+
+(ac-fn-call (lambda (x f args done)
+        ;; inserts the actual value for things in functional position, so
+        ;; (+ 1 2) compiles into (#<fn:+> 1 2)
+        ;;
+        ;; this is much faster than direct-calls but it's even more strict:
+        ;; if you redefine any global, even functions, those changes aren't
+        ;; retroactive: they affect new code, but not old code
+  (cond #|(inline-calls
+          (if (procedure? f)
+              (cons f (ac-all args))
+              (list* ref f (ac-all args))))|#
+        ;; (foo bar) where foo is a global variable bound to a procedure.
+        ;; this breaks if you redefine foo to be a non-fn (like a hash table)
+        ;; but as long as you don't redefine anything, it's faster
+        ((and (direct-calls)
+              (procedure? f))
+          (cons (ac x) (ac-all args)))
+        (else
+          (done)))))
+
+;=============================================================================
+;  Misc
+;=============================================================================
+(define sig (make-hasheq))
+
+(define (set-sig n s v)
+  (hash-set! sig n s)
+  (set-name n v))
+
+(define-syntax def
+  (syntax-rules ()
+    ((_ name parms #:sig sig . body)
+      (set-sig 'name 'sig (lambda parms . body)))
+    ((_ name parms . body)
+      (set-sig 'name 'parms (lambda parms . body)))))
+
+(define-syntax mac
+  (syntax-rules ()
+    ((_ name parms #:sig sig . body)
+      (set-sig 'name 'sig
+        (tagged 'mac (lambda parms . body))))
+    ((_ name parms . body)
+      (set-sig 'name 'parms
+        (tagged 'mac (lambda parms . body))))))
+
+(define-syntax assign
+  (syntax-rules ()
+    ((_ name #:sig sig value)
+      (set-sig 'name 'sig value))
+    ((_ name value)
+      (set-name 'name value))))
+
+(define (iround x) (inexact->exact (round x)))
+
+(define (is? x y)
+  (or (eqv? x y)
+      (and (string? x) (string? y) (string=? x y))
+      ;; TODO: why is this here in Arc 3.1?
+      ;(and (false? x) (false? y))
+      ))
+
+;; generic +: strings, lists, numbers.
+;; return val has same type as first argument.
+(define (ac-+ x y)
+        ;; TODO: better ordering for speed
+  (cond ((number? x)  (+ x y))
+        ((string? x)  (string-append x (coerce y 'string)))
+        ((list? x)    (append x y))
+        ;; TODO: check the behavior of Arc 3.1 for (+ "foo" #\a) and (+ #\a "foo")
+        ((char? x)    (string-append (string x) (coerce y 'string)))
+        (else         (+ x y))
+                      ;(err "can't + " x " with " y)
+                      ))
+
+(define (type x)
+        ;; TODO: better ordering for speed
+  (cond ((tagged? x)         (tagged-type x))
+        ((namespace? x)      'namespace)
+        ((pair? x)           'cons)
+        ;((stream? x)         'stream) ;; TODO: not sure about this
+        ((symbol? x)         'sym) ;; TODO: a type for boxes? overload 'sym?
+        ((null? x)           'sym) ; (type nil) -> sym
+        ((procedure? x)      'fn)
+        ((char? x)           'char)
+        ((string? x)         'string)
+        ((exact-integer? x)  'int)
+        ((number? x)         'num)     ; unsure about this
+        ((hash? x)           'table)
+        ((output-port? x)    'output)
+        ((input-port? x)     'input)
+        ((tcp-listener? x)   'socket)
+        ((exn? x)            'exception)
+        ((thread? x)         'thread)
+                             ;(err "type: unknown type" x)
+                             ;; TODO: not sure about this, but seems okay
+        (else                nil)))
+
+;; TODO: list + table of types for coerce
+(define (coerce x to (base 10))
+  (cond ((tagged? x)         (error "can't coerce annotated object"))
+        ((is? to (type x))   x)
+        ((symbol? x)         (case to
+                              ((string)  (symbol->string x))
+                              (else      (error "can't coerce" x to))))
+        ((pair? x)           (case to
+                              ((string)  (apply string-append
+                                                (map (lambda (y) (coerce y 'string))
+                                                     x)))
+                              (else      (error "can't coerce" x to))))
+        ;(eq? x nil)
+        ((null? x)           (case to
+                              ((string)  "")
+                              (else      (error "can't coerce" x to))))
+        ((char? x)           (case to
+                              ((int)     (char->integer x))
+                              ((string)  (string x))
+                              ((sym)     (string->symbol (string x)))
+                              (else      (error "can't coerce" x to))))
+        ((exact-integer? x)  (case to
+                              ((num)     x)
+                              ((char)    (integer->char x))
+                              ((string)  (number->string x base))
+                              (else      (error "can't coerce" x to))))
+        ((number? x)         (case to
+                              ((int)     (iround x))
+                              ((char)    (integer->char (iround x)))
+                              ((string)  (number->string x base))
+                              (else      (error "can't coerce" x to))))
+        ((string? x)         (case to
+                              ((sym)     (string->symbol x))
+                              ((cons)    (string->list x))
+                              ((num)     (or (string->number x base)
+                                             (error "can't coerce" x to)))
+                              ((int)     (let ((n (string->number x base)))
+                                           (if n  (iround n)
+                                                  (error "can't coerce" x to))))
+                              (else      (error "can't coerce" x to))))
+        (else                (error "can't coerce" x to))))
+
+;=============================================================================
+;  Arc 3.1 macros
+;=============================================================================
+(mac % args (% args))
+(mac w/include (x . body) (w/include x body))
+(mac w/exclude (x . body) (w/exclude x body))
+(mac w/rename  (x . body) (w/rename x body))
+(mac w/prefix  (x . body) (w/prefix x body))
+(mac import args (import args))
+(mac export args (export args))
+(mac reimport args (reimport args))
+
+;=============================================================================
+;  Arc 3.1 special forms
+;=============================================================================
 (mac square-brackets body
   `(,(->orig-box 'fn) (_) ,body))
 
-(mac % args
-  (cons nocompile
-    `(begin ,@args)))
+(mac if args
+  (ac-if args))
+
+(mac fn (parms . body)
+  (ac-fn parms body))
+
+(mac quasiquote (x)
+  (ac-quasiquote x))
 
 (mac assign (x . rest)
-  (cons nocompile
-    `(begin ,@(pairfn ac-assign (cons x rest)))))
-
-(mac var (x . rest)
-  (cons nocompile
-    `(begin ,@(pairfn ac-var (cons x rest)))))
-
-(mac get-setter (x get set)
-  (let ((x (->box x)))
-    (cons nocompile
-      `(begin (,set-box-get! ,x ,(ac get))
-              (,set-box-set! ,x ,(ac set))
-              ,(ac nil)))))
+  (ac-assign (cons x rest)))
 
 (mac quote (x)
-  (let ((x (dottedrec sym->nil x)))
-    (cons nocompile `(quote ,x))))
+  (ac-quote x))
 
-(mac w/exclude (x . body)
-  (w/-maker body (lambda (old new)
-    (for ((x x))
-      (set! new (w/exclude old new x)))
-    new)))
-
-(mac w/include (x . body)
-  (w/-maker body (lambda (old new)
-    (for ((x x))
-      (set! old (hash-set old x (hash-ref new x))))
-    old)))
-
-(mac w/rename (x . body)
-  (w/-maker body (lambda (old new)
-    (for ((x (->pair x)))
-      (set! new (hash-set new (cadr x) (hash-ref new (car x))))
-      (set! new (w/exclude old new (car x))))
-    new)))
-
-(mac w/prefix (x . body)
-  (w/-maker body (lambda (old new)
-    (hash-diff old new (lambda (key val)
-      (set! old (hash-set old
-                  (string->symbol (string-append (->string x) ; TODO ?
-                                                 (->string key)))
-                  val))))
-    old)))
-
-; TODO: re/im/export should probably eval its args
-(mac import args
-  (for ((x args))
-    (ac-load x))
-  nil)
-
-(mac export args
-  (for ((x args))
-    (ac-load x #:export #t))
-  nil)
-
-(mac reimport args
-  (for ((x args))
-    (ac-load x #:reimport #t))
-  nil)
-
-;(def %port-next-location)
-
-;(assign ref #:sig (x k (o d)) ref)
-;(def %symbol-global)
-
-;(assign close1 #:sig (x) close1)
-
-(def sym->filename (x)
-  (let ((x (->safe-box x)))
-    (if x
-        (box-file x)
-        nil)))
-
-(def call-w/stderr (port thunk)
-  (parameterize ((current-error-port port)) (thunk)))
-
-;===========================================================================
+;=============================================================================
 ;  Arc 3.1 primitives (97 total)
-;===========================================================================
+;=============================================================================
 ; Types
 ;; TODO: a better argument name than typ
 (def annotate (typ rep)
@@ -410,8 +776,4 @@
       (else             (warn "invalid declare mode " key)))
     val))
 
-
-(define (path x)
-  (build-path (current-load-relative-directory) x))
-
-(ac-load (path "arc.arc") #:export #t)
+(ac-load (rel-path "arc.arc") #:export #t)

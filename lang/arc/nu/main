@@ -1,12 +1,93 @@
-; don't like names of conswhen and consif
+#lang racket/base
 
-(var = assign)
+(provide (all-defined-out))
 
-(var do (annotate 'mac
-          (fn args
-            (cons %.nocompile
-              `(,'begin ,@(%.ac-all args))))))
+(require (only-in "../../../compiler" hyper-static? hygienic-macros? ac-load rel-path set-name tagged nocompile ac-assign ac-quasiquote ac-all ->box set-box-get! ac set-box-set! nil ->safe-box box-file ->pair ac-car ac-cdr ac-if ac-fn
 
+pairfn ac-var))
+
+(hyper-static? #t)
+(hygienic-macros? #t)
+
+(define-syntax def
+  (syntax-rules ()
+    ((_ name parms . body)
+      (set-name 'name (lambda parms . body)))))
+
+(define-syntax mac
+  (syntax-rules ()
+    ((_ name parms . body)
+      (set-name 'name
+        (tagged 'mac (lambda parms . body))))))
+
+(define-syntax var
+  (syntax-rules ()
+    ((_ name value)
+      (set-name 'name value))))
+
+
+;(import-dirs (cons (import-dirs)))
+
+(mac var (x . rest)
+  (cons nocompile
+    `(begin ,@(pairfn ac-var (cons x rest)))))
+
+(mac = (x . rest)
+  (ac-assign (cons x rest)))
+
+(mac if args
+  (ac-if args))
+
+(mac fn (parms . body)
+  (ac-fn parms body))
+
+(mac quote (x)
+  (ac-quasiquote x))
+
+(mac do args
+  (cons nocompile
+    `(begin ,@(ac-all args))))
+
+
+(mac get-setter (x get set)
+  (let ((x (->box x)))
+    (cons nocompile
+      `(begin (,set-box-get! ,x ,(ac get))
+              (,set-box-set! ,x ,(ac set))
+              ,(ac nil)))))
+
+;(def %port-next-location)
+
+;(assign ref #:sig (x k (o d)) ref)
+;(def %symbol-global)
+
+;(assign close1 #:sig (x) close1)
+
+(def make-macro (x)
+  (tagged 'mac x))
+
+(def sym->filename (x)
+  (let ((x (->safe-box x)))
+    (if x
+        (box-file x)
+        nil)))
+
+
+(var pair ->pair)
+(var map  map)
+(var list list)
+(var hash hash)
+
+; Conses
+(var nil nil)
+(var cons cons)
+(var car  ac-car)
+(var cdr  ac-cdr)
+
+
+
+
+#|
 (var var= (annotate 'mac
             (fn (name val)
               `(do (var ,name)
@@ -1696,3 +1777,6 @@
 ; crazy that finding the top 100 nos takes so long:
 ;  (let bb (n-of 1000 (rand 50)) (time10 (bestn 100 > bb)))
 ;  time: 2237 msec.  -> now down to 850 msec
+|#
+
+(ac-load (rel-path "nu.nu") #:export #t)

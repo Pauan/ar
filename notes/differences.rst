@@ -6,6 +6,8 @@ Bug Fixes
 
 * ``coerce`` and ``annotate`` use Arc's ``is`` rather than Racket's ``eqv?``
 
+* atstrings and ssyntax use Arc's ``sread`` rather than Racket's ``read``
+
 * The following macro works differently in Arc/Nu (use ``%`` instead)::
 
     > (mac $ (x) `(cdr `(0 . ,,x)))
@@ -39,13 +41,80 @@ Bug Fixes
 New Features
 ------------
 
-* The following Arc macros are defined::
+* Arc special forms are implemented as macros::
 
-    % assign curly-brackets export fn get-setter if import quasiquote quote reimport square-brackets var w/exclude w/include w/prefix w/rename
+    assign fn if quasiquote quote
 
-* The following Arc functions are defined::
+* New macros:
 
-    call-w/stderr sym->box sym->filename
+  * ``{...}`` expands to ``(curly-brackets ...)``
+
+  * ``[...]`` expands to ``(square-brackets ...)``
+
+  * ``%`` lets you use Racket stuff from within Arc::
+
+      (%.string? "yes")
+
+      (% (let self ((x 0))
+           (if (< x 5)
+               (self (+ x 1))
+               (displayln x))))
+
+    You can also use it to access the compiler::
+
+      (%.ac '(+ 1 2))
+
+      (%.->box '+)
+
+  * ``w/include``, ``w/exclude``, ``w/rename``, and ``w/prefix`` provide great control over variables::
+
+      ; Only the variable foo is accessible outside the w/include
+      (w/include (foo)
+        (= foo 1)
+        (= bar 2)
+        (= qux 3))
+
+      ; The variable foo is not accessible outside the w/exclude
+      (w/exclude (foo)
+        (= foo 1)
+        (= bar 2)
+        (= qux 3))
+
+      ; The variable foo is renamed to foo2; bar and qux are not renamed
+      (w/rename (foo foo2)
+        (= foo 1)
+        (= bar 2)
+        (= qux 3))
+
+      ; foo, bar, and qux are renamed to my-foo, my-bar, and my-qux
+      (w/prefix my-
+        (= foo 1)
+        (= bar 2)
+        (= qux 3))
+
+  * ``w/lang`` lets you use a different language in the same file::
+
+      (w/lang arc/nu
+        (var foo 1))
+
+  * ``import``, ``export``, and ``reimport`` provide a more concise way to load files. They also work with ``w/include``, ``w/exclude``, ``w/rename``, ``w/prefix``, and ``w/lang``::
+
+      ; Loads the foo library defined in arc/3.1
+      (import foo)
+
+      ; Loads the foo library defined in arc/nu
+      (w/lang arc/nu
+        (import foo))
+
+      ; Loads the qux library, but without the foo and bar variables
+      (w/exclude (foo bar)
+        (import qux))
+
+      ; Loads the foo library and also exports it
+      (export foo)
+
+      ; Reloads the foo library even if it's already been loaded
+      (reimport foo)
 
 * Fractions print as decimals::
 
@@ -92,30 +161,17 @@ New Features
 
   This includes boxes::
 
+    > (mac box (x)
+        (%.->box x))
+
     > (mac foo (x)
-        `(,(sym->box 'let) a 5
-           (,(sym->box '+) ,x a)))
+        `(,(box let) a 5
+           (,(box +) ,x a)))
 
     > (macex1 '(foo 10))
-    (#<box:let> a 5 (#<box:+> 10 a))
+    (#<mac:let> a 5 (#<fn:+> 10 a))
 
     > (foo 10)
     15
 
   This enables you to write hygienic macros in Arc
-
-* A new ``'inline-calls`` declare mode, which is even faster than
-  ``'direct-calls``::
-
-    > (declare 'inline-calls t)
-
-    > (%.ac '(+ 1 2))
-    (#<fn:+> 1 2)
-
-  Basically, it takes the value of the symbol at compile-time and splices it
-  into the expression. This is much faster than direct-calls because it
-  doesn't need to do a global lookup at runtime.
-
-  The downside is that if you redefine any global variable, even functions,
-  those changes aren't retroactive: they'll affect new code but not old
-  code

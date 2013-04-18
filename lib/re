@@ -1,5 +1,5 @@
 (def regexp (pattern)
-  (if (isa pattern 'string)
+  (if (string? pattern)
       %.pregexp.pattern
       pattern))
 
@@ -7,19 +7,19 @@
   (w/uniq u
     (w/sym it
       (let (p in) vars
-        `(with (,p   (regexp ,p)
-                ,in  (if (isa ,in 'string)
-                         (instring ,in)
-                         ,in)
-                it   ,%.regexp-try-match)
-           (whenlet ,u ,match
-             (maplet it ,u
+        '(with (p   (regexp p)
+                in  (if (string? in)
+                        (instring in)
+                        in)
+                it  %.regexp-try-match)
+           (whenlet u match
+             (maplet it u
                         ;; TODO: figure out how to get rid of this `if`
-               ,(let x `(if (,%.bytes? it)
-                            (,%.bytes->string/utf-8 it)
+               ,(let x '(if (%.bytes? it)
+                            (%.bytes->string/utf-8 it)
                             it)
                   (if after
-                      `(let it ,after ,x)
+                      '(let it after x)
                       x)))))))))
 
 (def re-match (pattern (o in (stdin)))
@@ -33,9 +33,6 @@
 
 (def re-match1 (pattern (o in (stdin)))
   (car:re-match pattern in))
-
-#|(def re-match1 (pattern (o in (stdin)))
-  ((re-match pattern in) 1))|#
 
 (def re-posmatch (pattern (o in stdin))
   (or (%.regexp-match-positions regexp.pattern in) nil))
