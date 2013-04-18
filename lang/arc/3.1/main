@@ -2,17 +2,15 @@
 
 (provide (all-defined-out))
 
-(require (only-in "../../../compiler" ac-read ac-string ac nil dottedrec sym->nil ac-ssexpand macro? nocompile ac-mac-call ac-fn-call ac-all set-name tagged? tagged-type tagged ac-if ac-fn ac-quasiquote ac-assign ac-quote tagged-rep ac-car ac-cdr make-pairwise make-comparer tnil make-reduce make-read make-write t true? lookup false? uniq-counter call warn ac-load rel-path
-
-% w/include w/exclude w/rename w/prefix import export reimport
-
-->orig-box orig-box?))
+(require "../../../compiler")
 
 (require ffi/unsafe)
 (require racket/unsafe/ops)
 (require racket/tcp)
 (require racket/port)
 (require racket/system)
+
+(compile-allow-set!-undefined #t)
 
 ;=============================================================================
 ;  atstrings
@@ -434,13 +432,14 @@
         (else                (error "can't coerce" x to))))
 
 ;=============================================================================
-;  Arc 3.1 macros
+;  New macros
 ;=============================================================================
 (mac % args (% args))
 (mac w/include (x . body) (w/include x body))
 (mac w/exclude (x . body) (w/exclude x body))
 (mac w/rename  (x . body) (w/rename x body))
 (mac w/prefix  (x . body) (w/prefix x body))
+(mac w/lang    (x . body) (w/lang x body))
 (mac import args (import args))
 (mac export args (export args))
 (mac reimport args (reimport args))

@@ -20,28 +20,29 @@
 (define exec-dir         (make-parameter #f))
 (define filename         (make-parameter #f))
 
-(define ac-read          (make-parameter read))
-(define ac-fn-call       (make-parameter (lambda (x f args done) (done))))
-(define ac-mac-call      (make-parameter (lambda (c f args done) (done))))
-(define ac-string        (make-parameter (lambda (s) (string-copy s)))) ; avoid immutable strings
-(define ac-ssexpand      (make-parameter (lambda (x) x)))
+(define ac-read          (make-parameter #f))
+(define ac-fn-call       (make-parameter #f))
+(define ac-mac-call      (make-parameter #f))
+(define ac-string        (make-parameter #f))
+(define ac-ssexpand      (make-parameter #f))
 
 (define debug?           (make-parameter #f))
 (define hygienic-macros? (make-parameter #f))
 (define hyper-static?    (make-parameter #f))
 
+(define lang-cache       (make-parameter #f))
 (define import-cache     (make-parameter #f))
-(define import-dirs      (make-parameter null))
+(define import-dirs      (make-parameter #f))
 
 (define local?           (make-parameter #f))
-(define locals           (make-parameter (hasheq)))
+(define locals           (make-parameter #f))
 
 (define orig-globals     (make-parameter #f))
 (define exported-globals (make-parameter #f))
-(define globals          (make-parameter (hasheq)))
+(define globals          (make-parameter #f))
 
 (define ac-fn-let*       (make-parameter #f))
-(define uniq-counter     (make-parameter 1))
+(define uniq-counter     (make-parameter #f))
 
 (struct box (uniq file [get #:auto #:mutable]
                        [set #:auto #:mutable])
@@ -435,18 +436,17 @@
 
 (define (exists? p dir file none)
   (cond ((file-exists? p)
-          (file p))
+          (file (path->string p)))
         ((directory-exists? p)
-          (dir p))
+          (dir (path->string p)))
         (else
           (none))))
 
 (define (abspath x y)
-  (path->string
-    (normal-case-path
-      (simplify-path
-        (resolve-path
-          (path->complete-path (expand-user-path x) y))))))
+  (normal-case-path
+    (simplify-path
+      (resolve-path
+        (path->complete-path (expand-user-path x) y)))))
 
 (define (find-filename p dir file)
   (let self ((x (import-dirs)))
@@ -473,8 +473,6 @@
   (parameterize ((filename p)
                  (import-dirs (cons (path-only p) ; TODO: is this good?
                                     (import-dirs)))
-                 (hyper-static? (hyper-static?))
-                 (hygienic-macros? (hygienic-macros?))
                  (exported-globals (make-hasheq)))
     (let ((old (globals)))
       (call-with-input-file p
@@ -505,6 +503,36 @@
           (when hash
             (hash-merge! hash (hash-ref (import-cache) p)))))
       (void))))
+
+(define (ac-lang lang f)
+  (let ((path (abspath (build-path "lang" lang "main") (exec-dir))))
+    (hash-if-key (lang-cache) path
+      (lambda (x y)
+        (call-with-parameterization y f))
+      (lambda (x)
+        (ac-init
+          (lambda ()
+            (parameterize ((current-load-relative-directory (path-only path))
+                           (filename (path->string path)))
+              (namespace-require path)
+              (let ((y (current-parameterization)))
+                (hash-set! x path y)
+                (call-with-parameterization y f)))))))))
+
+(define (w/lang x body)
+  (let-values (((x glob)
+                (ac-lang (symbol->string x)
+                  (lambda ()
+                    (let* ((old  (globals))
+                           (body (ac-all body))
+                           (new  (make-hasheq)))
+                      (hash-diff old (globals) (lambda (key val)
+                        (hash-set! new key val)))
+                      (values (cons nocompile
+                                `(begin ,@body))
+                              new))))))
+    (globals (hash-merge (globals) glob))
+    x))
 
 ;=============================================================================
 ;  fn
@@ -723,9 +751,7 @@
 
 ; Returns the original (first-created) box
 (define (->orig-box x)
-  (hash-ref! (orig-globals) x
-    (lambda ()
-      (->global-box! x))))
+  (hash-ref (orig-globals) x))
 
 (define (orig-box? x y)
   (when (symbol? x)
@@ -858,45 +884,56 @@
   nil)
 
 (define (init)
-  (->orig-box 'fn)
-  (->orig-box 'and)
-  (->orig-box 'compose)
-  (->orig-box 'complement)
-  (->orig-box 'no)
-  (->orig-box 'andf)
-  (->orig-box 'string)
-  (->orig-box 'quote)
-  (->orig-box 'unquote)
-  (->orig-box 'unquote-splicing)
-  (->orig-box 'quasiquote)
-  (->orig-box 'get)
+  (make-global-box 'fn)
+  (make-global-box 'and)
+  (make-global-box 'compose)
+  (make-global-box 'complement)
+  (make-global-box 'no)
+  (make-global-box 'andf)
+  (make-global-box 'string)
+  (make-global-box 'quote)
+  (make-global-box 'unquote)
+  (make-global-box 'unquote-splicing)
+  (make-global-box 'quasiquote)
+  (make-global-box 'get)
 )
+
+(define (ac-init f)
+  (parameterize ((ac-read          read)
+                 (ac-fn-call       (lambda (x f args done) (done)))
+                 (ac-mac-call      (lambda (c f args done) (done)))
+                 (ac-string        (lambda (s) (string-copy s))) ; avoid immutable strings
+                 (ac-ssexpand      (lambda (x) x))
+                 (hygienic-macros? #f)
+                 (hyper-static?    #f)
+                 (globals          (orig-globals)))
+    (f)))
 
 (define (w/init dir path lang f #:debug [debug #f])
   ;; This is so that it's possible to retrieve the column/line of an input port
   ; (port-count-lines-enabled #t)
   (parameterize ((current-readtable arc-readtable)
-                 (filename (path->string path))
-                 (debug? debug)
-                 (globals (globals))
-                 (exec-dir dir)
-                 (import-cache (make-hash))
-                 (import-dirs (list* ;(path->string (current-directory)) ; TODO
-                                     (path->string (build-path dir "lib"))
-                                     (path->string dir)
-                                     (import-dirs)))
-                 (orig-globals (make-hasheq))
-                 (compile-allow-set!-undefined #t)
-                 (current-load-relative-directory (build-path dir "lang" lang))) ; TODO
+                 (filename          (path->string path))
+                 (debug?            debug)
+                 (exec-dir          dir)
+                 (import-dirs       (list ;(path->string (current-directory)) ; TODO
+                                          (path->string (build-path dir "lib"))
+                                          (path->string dir)))
+                 (import-cache      (make-hash))
+                 (lang-cache        (make-hash))
+                 (globals           (hasheq))
+                 (locals            (hasheq))
+                 (uniq-counter      1))
     (init)
-    (namespace-require (build-path dir "lang" lang "main"))
-    ;; These files have Arc/Nu's dir prefixed to them
-    ;; and are automatically loaded when Arc/Nu
-    ;; starts up.
-    #|(for ((x (list "02 arc"
-                   "03 utils"
-                   "04 paths"
-                   "lib/strings"
-                   "lib/re")))
-      (ac-load (build-path dir x)))|#
-    (f ac-load)))
+    (parameterize ((orig-globals (globals)))
+      (ac-lang lang (lambda ()
+        ;; These files have Arc/Nu's dir prefixed to them
+        ;; and are automatically loaded when Arc/Nu
+        ;; starts up.
+        #|(for ((x (list "02 arc"
+                       "03 utils"
+                       "04 paths"
+                       "lib/strings"
+                       "lib/re")))
+          (ac-load (build-path dir x)))|#
+        (f ac-load))))))

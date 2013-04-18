@@ -2,10 +2,9 @@
 
 (provide (all-defined-out))
 
-(require (only-in "../../../compiler" hyper-static? hygienic-macros? ac-load rel-path set-name tagged nocompile ac-assign ac-quasiquote ac-all ->box set-box-get! ac set-box-set! nil ->safe-box box-file ->pair ac-car ac-cdr ac-if ac-fn
+(require "../../../compiler")
 
-pairfn ac-var))
-
+(compile-allow-set!-undefined #t)
 (hyper-static? #t)
 (hygienic-macros? #t)
 
@@ -26,8 +25,20 @@ pairfn ac-var))
       (set-name 'name value))))
 
 
+(mac % args (% args))
+(mac w/include (x . body) (w/include x body))
+(mac w/exclude (x . body) (w/exclude x body))
+(mac w/rename  (x . body) (w/rename x body))
+(mac w/prefix  (x . body) (w/prefix x body))
+(mac w/lang    (x . body) (w/lang x body))
+(mac import args (import args))
+(mac export args (export args))
+(mac reimport args (reimport args))
+
+
 ;(import-dirs (cons (import-dirs)))
 
+; TODO
 (mac var (x . rest)
   (cons nocompile
     `(begin ,@(pairfn ac-var (cons x rest)))))
