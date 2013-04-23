@@ -39,7 +39,7 @@ Arc/Nu is Arc 3.1 but *bettar*. It includes bug fixes, new features, additional 
 So, why would you want to use it over Arc 3.1 or Anarki?
 
 * It's faster! Arc/Nu strives to be *at least* as fast as Arc 3.1, and in some
-  cases is significantly faster. For instance, ``(+ 1 2)`` was 133.19% faster
+  cases is significantly faster. For instance, ``(+ 1 2)`` was 75.21% faster
   in Arc/Nu than in Arc 3.1, last time I checked.
 
 * Arc/Nu uses boxes internally. This means you get an awesome namespace system (using the ``w/include``, ``w/exclude``, ``w/rename``, and ``w/prefix`` macros). You can also turn on hyper-static scope and hygienic macros.
@@ -120,13 +120,13 @@ So, why would you want to use it over Arc 3.1 or Anarki?
       > (%.string? "foo")
       #t
 
-* ``[a b c]`` is expanded into ``(square-brackets a b c)`` which is then
+* ``[a b c]`` is expanded into ``(square-brackets (a b c))`` which is then
   implemented as a macro::
 
-      (mac square-brackets body
+      (mac square-brackets (body)
         `(fn (_) ,body))
 
-  Likewise, ``{a b c}`` is expanded into ``(curly-brackets a b c)``
+  Likewise, ``{a b c}`` is expanded into ``(curly-brackets (a b c))``
 
   This makes it easy to change the meaning of ``[...]`` and ``{...}`` from
   within Arc

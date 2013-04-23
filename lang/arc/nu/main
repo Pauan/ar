@@ -3,6 +3,7 @@
 (provide (all-defined-out))
 
 (require "../../../compiler")
+(require racket/list)
 
 (compile-allow-set!-undefined #t)
 (hyper-static? #t)
@@ -11,18 +12,21 @@
 (define-syntax def
   (syntax-rules ()
     ((_ name parms . body)
-      (set-name 'name (lambda parms . body)))))
+      (parameterize ((box-constructor box-const))
+        (set-name 'name (lambda parms . body))))))
 
 (define-syntax mac
   (syntax-rules ()
     ((_ name parms . body)
-      (set-name 'name
-        (tagged 'mac (lambda parms . body))))))
+      (parameterize ((box-constructor box-const))
+        (set-name 'name
+          (tagged 'mac (lambda parms . body)))))))
 
-(define-syntax var
+(define-syntax const
   (syntax-rules ()
     ((_ name value)
-      (set-name 'name value))))
+      (parameterize ((box-constructor box-const))
+        (set-name 'name value)))))
 
 
 (mac % args (% args))
@@ -38,13 +42,22 @@
 
 ;(import-dirs (cons (import-dirs)))
 
-; TODO
+(mac parameter-var (x . rest)
+  (ac-var (cons x rest) "parameter-var" #:make box-parameter))
+
 (mac var (x . rest)
-  (cons nocompile
-    `(begin ,@(pairfn ac-var (cons x rest)))))
+  (ac-var (cons x rest) "var"))
+
+(mac const (x . rest)
+  (ac-var (cons x rest) "const" #:make box-const))
+
+(mac const-rec (x . rest)
+  (ac-const (cons x rest) "def-const"))
 
 (mac = (x . rest)
-  (ac-assign (cons x rest)))
+  (ac-assign (cons x rest) "="
+    #:each (lambda (x y)
+             (list hash-set (car x) (cadr x) y))))
 
 (mac if args
   (ac-if args))
@@ -56,16 +69,16 @@
   (ac-quasiquote x))
 
 (mac do args
-  (cons nocompile
+  (bypass
     `(begin ,@(ac-all args))))
 
 
-(mac get-setter (x get set)
+#|(mac get-setter (x get set)
   (let ((x (->box x)))
-    (cons nocompile
+    (bypass
       `(begin (,set-box-get! ,x ,(ac get))
               (,set-box-set! ,x ,(ac set))
-              ,(ac nil)))))
+              ,(ac nil)))))|#
 
 ;(def %port-next-location)
 
@@ -74,8 +87,36 @@
 
 ;(assign close1 #:sig (x) close1)
 
+(def str? (x)
+  (tnil (string? x)))
+
+(def cons? (x)
+  (tnil (pair? x)))
+
+(def apply (f . args)
+  ; TODO; is this inefficient?
+  (apply apply call f args))
+
+(const is (make-pairwise is?))
+
+; TODO should probably be in compiler
+(define (->all-string args)
+  (apply string-append (map ->string args)))
+
+(def str args
+  (->all-string args))
+
 (def make-macro (x)
   (tagged 'mac x))
+
+(def uniq ()
+  (ac-uniq 'g nil))
+
+(def prn (x)
+  (displayln x))
+
+(def sym args
+  (->sym (->all-string args)))
 
 (def sym->filename (x)
   (let ((x (->safe-box x)))
@@ -83,17 +124,38 @@
         (box-file x)
         nil)))
 
+(const dynamic-wind dynamic-wind)
+(const pair ->pair)
 
-(var pair ->pair)
-(var map  map)
-(var list list)
-(var hash hash)
+(const map-fn  map)
+(const each-fn for-each)
+
+(const list list)
+(const list* list*)
+(const hash hash)
+;(const hash-set hash-set)
+
+(const t t)
+
+(def err args
+  (error (apply string-append (map ->string args))))
+
+(const reduce-fn reduce)
+
+(def ->cons (x)
+  (cond ((pair? x)    x)
+        ((null? x)    x)
+        ((string? x)  (string->list x))
+        (else         (error (format "can't convert ~s to a cons" x)))))
+
+(const macex1 macex1)
+(const len length)
 
 ; Conses
-(var nil nil)
-(var cons cons)
-(var car  ac-car)
-(var cdr  ac-cdr)
+(const nil nil)
+(const cons cons)
+(const car  ac-car)
+(const cdr  ac-cdr)
 
 
 
@@ -1791,3 +1853,5 @@
 |#
 
 (ac-load (rel-path "nu.nu") #:export #t)
+(ac-load (rel-path "paths.nu") #:export #t)
+(ac-load "re" #:export #t)

@@ -1,3 +1,6 @@
+#lang racket/base
+
+(require (only-in "compiler" debug? globals ac-read ac print))
 (require readline/readline)
 
 ; TODO test that everything works
@@ -37,7 +40,7 @@
                           (if (syntax? it)
                               (syntax->datum it)
                               it))
-                        (sread (current-input-port) eof))))
+                        ((ac-read) (current-input-port)))))
           (if (eof-object? expr)
               (when interactive
                 (newline))
@@ -50,7 +53,7 @@
                            (for ((x results))
                              (unless (void? x)
                                (print write x (current-output-port))))
-                           ;(for-each (current-print) results)
+                           ;(for-each (current-print) results) TODO use current-print
                            )))
                      ;; Abort to loop. (Calling `repl' directly would not be a tail call.)
                      (abort-current-continuation (default-continuation-prompt-tag))))))

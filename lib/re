@@ -1,9 +1,35 @@
-(def regexp (pattern)
-  (if (string? pattern)
-      %.pregexp.pattern
+(def ->re (pattern)
+  (if (str? pattern)
+      ((% pregexp) pattern)
       pattern))
 
-(mac w/re-matcher (vars match (o after))
+(def ->input (x)
+  (if (str? x)
+      ((% open-input-string) x)
+      x))
+
+(const re-escape (% regexp-quote))
+
+(def re (pat str)
+  (let f (if (str? str)
+             (% regexp-match)
+             (% regexp-try-match))
+    (let f (f pat str)
+      (if f (map-fn str f) f)))) ; TODO or
+
+(def re? (pat str)
+  ((% tnil) ((% regexp-match?) pat str)))
+
+(mac re-multi (x . body)
+  (w/uniq (u v)
+    '(let u x
+       ,(alet body (pair body)
+          (iflet ((pat f) . rest) body
+            '(iflet v (re pat u)
+               (apply f v)
+               ,(self rest)))))))
+
+#|(mac w/re-matcher (vars match (o after))
   (w/uniq u
     (w/sym it
       (let (p in) vars
@@ -65,4 +91,4 @@
 
 
 (def re-split (x y)
-  (%.regexp-split regexp.x y))
+  (%.regexp-split regexp.x y))|#

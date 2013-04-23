@@ -1,0 +1,164 @@
+#! /usr/bin/env racket
+#lang racket/base
+
+(require racket/cmdline)
+(require racket/path)
+(require racket/list)
+
+(define exec-dir
+  (path->string (path-only (normalize-path (find-system-path 'run-file)))))
+
+(define time        10000)
+(define iter        1)
+(define arc3-dir    (build-path exec-dir "../../../3.1.orig"))
+;(define ar-dir      (build-path exec-dir "../../master"))
+(define nu-dir      (build-path exec-dir "../"))
+;(define lite-nu-dir (build-path exec-dir "../../lite nu/"))
+
+(define arguments
+  (command-line
+    #:program "Arc/Nu (timeit)"
+    #:once-each
+    [("--time")     i "Time per language"
+                      (set! time (string->number i))]
+    [("--arc3-dir") x "Path to the Arc 3.1 directory"
+                      (set! arc3-dir x)]
+    #:args args
+    args))
+
+#|(define (ac-require-base)
+  (namespace-require/expansion-time '(only racket/private/pre-base
+                                       #%app #%top #%datum #%top-interaction))
+  (namespace-require/copy '(prefix racket- racket/base)))|#
+
+(define (percent x y)
+  (if (> x y)
+      (* (- (/ x y) 1) -100)
+      (* (- (/ y x) 1) 100)))
+
+; TODO code duplication with timecompare
+(define (timeit1 f limit)
+  (let ((time  (+ (current-milliseconds) limit))
+        (gc    (current-gc-milliseconds))
+        (mem   (current-memory-use)))
+    (let loop ((n 0))
+      (f)
+      (if (< (current-milliseconds) time)
+          (loop (+ n 1))
+          (list n
+                (- (current-gc-milliseconds) gc)
+                (- (current-memory-use)      mem))))))
+
+(define (trunc x (dec 2))
+  (if (= dec 0)
+      (number->string (inexact->exact (round x)))
+      (real->decimal-string x dec)
+      ;(/ (round (* (inexact->exact x) (expt 10 dec))) (expt 10 dec))
+      ))
+
+(define (commafy x (dec 2))
+  (let ((x    (string->list (trunc x dec)))
+        (ind  (if (= dec 0) 0 (+ dec 1))))
+    (list->string
+      (append (let loop ((x    (reverse (drop-right x ind)))
+                         (n    0)
+                         (acc  null))
+                (cond ((null? x)
+                        acc)
+                      ((and (> n 2)
+                            ;; TODO: a little ew
+                            (not (eqv? (car x) #\-)))
+                        (loop x 0 (cons #\, acc)))
+                      (else
+                        (loop (cdr x) (+ n 1) (cons (car x) acc)))))
+              (take-right x ind)))))
+
+(define (->strings name x diff)
+  (list name
+        (commafy (car x) 0)
+        (number->string (ceiling (cadr x)))
+        ;(number->string (ceiling (caddr x)))
+        (commafy diff)))
+
+(define (zip x)
+  (apply map list x))
+
+(define (make-same-length x)
+  (let ((i (apply max (map string-length x))))
+    (map (lambda (x) (string-append (make-string (- i (string-length x)) #\space) x)) x)))
+
+(define (print-table x)
+  (for ((x (zip (map make-same-length (zip x)))))
+    (apply printf "~a  iter: ~a   gc: ~a   diff: ~a%~n" x)))
+
+(define (print x)
+  (let ((lowest (caadr (argmin caadr x))))
+    (print-table
+      (map (lambda (x)
+             (->strings (car x) (cadr x) (percent lowest (caadr x))))
+           (reverse (sort x < #:key caadr))))))
+
+(define (median xs)
+  (let ((xs  (sort xs <))
+        (n   (/ (length xs) 2)))
+    (if (integer? n)
+        (let ((x  (list-ref xs (- n 1)))
+              (y  (list-ref xs n)))
+          (/ (+ x y) 2))
+        (list-ref xs (floor n)))))
+
+(define (doit x xs)
+  (for ((x x))
+    (display "> ")
+    (displayln x)
+    (print (for/list ((y xs))
+             (apply (lambda (name param read ac)
+                      (call-with-parameterization param
+                        (lambda ()
+                          (let ((f (eval `(lambda ()
+                                            ,(ac (read (open-input-string x)))))))
+                            #|(display (f))
+                            (display "  ")
+                            (display (ac (read (open-input-string x))))
+                            (newline)|#
+                            (let ((time (/ time iter)))
+                              (let loop ((x iter)
+                                         (r null))
+                                (if (> x 0)
+                                    (loop (- x 1)
+                                          (cons (timeit1 f time) r))
+                                    (list name (map median (zip r))))))))))
+                    y)))))
+
+
+(define-syntax-rule (w/ x y . body)
+  (parameterize ((current-directory x)
+                 (current-namespace y)
+                 (current-readtable (current-readtable)))
+    . body))
+
+(define arc3-namespace
+  (w/ arc3-dir (make-base-empty-namespace)
+    (namespace-require 'mzscheme)
+    (namespace-require "ac.scm")
+    (namespace-require "brackets.scm")
+    (eval '(use-bracket-readtable))
+    (eval '(aload "arc.arc"))
+    (list "Arc 3.1"
+      (current-parameterization)
+      (eval 'read)
+      (lambda (x)
+        ((eval 'ac) x '())))))
+
+(define nu-namespace
+  (w/ nu-dir (make-base-empty-namespace)
+    (define nu-path (build-path nu-dir "compiler"))
+    (namespace-require nu-path)
+    ((eval 'w/init) nu-dir nu-path "arc/3.1"
+      (lambda (ac-load)
+        (list "Arc/Nu "
+          (current-parameterization)
+          ((eval 'ac-read))
+          (eval 'ac))))))
+
+(doit arguments (list nu-namespace arc3-namespace))

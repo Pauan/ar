@@ -1,16 +1,17 @@
 ;;(load:string %.exec-dir "lib/utils.arc")
 ;;(load:string %.exec-dir "lib/parameters.arc")
 
-(%require racket/path)
+;(%require racket/path)
 
 (parameter-var cwd
-  (%.make-derived-parameter %.current-directory
-    (fn (v) (zap string v)
-            (if empty.v
-                (%.current-directory)
-                (%.expand-user-path v)))
-    (fn (v) (%.path->string v))))
-
+  ((% make-derived-parameter) (% current-directory)
+    (fn (v)
+      (let v (str v)
+        (if (is v "")
+            ((% current-directory))
+            ((% expand-user-path) v))))
+    (fn (v) ((% path->string) v))))
+#|
 ;; TODO: inefficient
 (parameter-var script-args
   (%.make-derived-parameter %.current-command-line-arguments
@@ -98,3 +99,4 @@
 
 (def hidden-file? (x)
   (is string.x.0 #\.))
+|#

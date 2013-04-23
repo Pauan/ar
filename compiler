@@ -2,17 +2,21 @@
 ;; Arc/Nu Compiler -- Manifest Destiny
 ;; http://www.youtube.com/watch?v=qXp3qjeM0e4
 
+;; TODO: quasiquote is really slow (compare "\`(1 2 3 4 . 5)" in the timeit program)
 ;; TODO: look for uses of null? and replace them with empty-stream? as needed
 ;; TODO: use Racket's custom write/display stuff, so that printing infinite lists works
 ;; TODO: keyword args ???
 
-(provide (all-defined-out))
+(provide (all-defined-out)
+         (all-from-out racket/base)
+         #|#%app #%top #%datum quote begin set! lambda if let* #%top-interaction
+         namespace-require|#
+         )
 
 (require racket/unsafe/ops)
 (require racket/path)
 
 ;; Layer 1
-(define nocompile        (gensym)) ; if in the car the expression won't be compiled
 (define names            (make-hasheq))
 (define t                't)
 (define nil              null)
@@ -37,6 +41,9 @@
 (define local?           (make-parameter #f))
 (define locals           (make-parameter #f))
 
+(define procedure-var    (make-parameter #f))
+(define box-constructor  (make-parameter #f))
+(define assigned-globals (make-parameter #f))
 (define orig-globals     (make-parameter #f))
 (define exported-globals (make-parameter #f))
 (define globals          (make-parameter #f))
@@ -44,8 +51,9 @@
 (define ac-fn-let*       (make-parameter #f))
 (define uniq-counter     (make-parameter #f))
 
-(struct box (uniq file [get #:auto #:mutable]
-                       [set #:auto #:mutable])
+(struct bypass (value))
+
+(struct box (uniq file)
   #:constructor-name make-box
   #:guard (lambda (uniq file _)
             (if (symbol-interned? uniq)
@@ -56,6 +64,9 @@
        (display "#<box:" port)
        (display (box-uniq x) port)
        (display ">" port))])
+
+(struct box-const     box ())
+(struct box-parameter box ())
 
 (struct tagged (type rep)
   ;; TODO: make mutable later, maybe
@@ -133,7 +144,7 @@
 (define (dottedrec f xs)
   (let self ((xs xs))
     (if (pair? xs)
-        (cons (f (self (car xs)))
+        (cons (f (self (car xs))) ; TODO should this be (self (f ...)) ?
               (self (cdr xs)))
         (f xs))))
 
@@ -278,23 +289,26 @@
 
 ;; Layer 5
 (define (fn-call-normal x args)
-  (let ((r (ac x)))
-            ;; optimization for (#<fn> ...) and ((fn ...) ...)
-    (if (or (procedure? r)
-            (and (pair? r)
-                 (eq? (car r) 'lambda))
-            ;; needed because call doesn't accept keyword args
-            ;(keyword-args? args)
-            )
-        (cons r (ac-all args))
-        (list* 'call r (ac-all args))))) ; TODO
+          ;; optimization for (#<fn> ...) and ((fn ...) ...)
+  (if (or (procedure? x)
+          (and (pair? x)
+               (eq? (car x) 'lambda))
+          (and (symbol? x)
+               (hash-ref (procedure-var) x (lambda () #f)))
+          ;; needed because call doesn't accept keyword args
+          ;(keyword-args? args)
+          )
+      (cons x args)
+      (list* call x args)))
 
 (define (fn-call x args)
   (lookup x
     (lambda (f)
-      ((ac-fn-call) x f args (lambda () (fn-call-normal x args))))
+      (let ((x    (ac x))
+            (args (ac-all args)))
+        ((ac-fn-call) x f args (lambda () (fn-call-normal x args)))))
     (lambda ()
-      (fn-call-normal x args))))
+      (fn-call-normal (ac x) (ac-all args)))))
 
 (define (mac-call x y)
   (macro? x
@@ -312,6 +326,13 @@
               (mac-call f args))))
         (mac-call f args))))
 
+(define (->racket x)
+  (if (null? x)
+      ;; this causes it to return null
+      ;null
+      `(quote ,x)
+      x))
+
 (define (ac x)
   (cond ((symbol? x)
           (let ((y ((ac-ssexpand) x)))
@@ -319,20 +340,24 @@
                 (ac (->box y))
                 (ac y))))
         ((box? x)
-          (if (box-get x)
-              (ac ((box-get x)))
-              (box-uniq x)))
+          (cond ((box-const? x)
+                  (lookup x
+                    (lambda (x)
+                      (->racket x))
+                    (lambda ()
+                      (box-uniq x))))
+                ((box-parameter? x)
+                  (list (box-uniq x)))
+                (else
+                  (box-uniq x))))
         ((pair? x)
-          (if (eq? (car x) nocompile)
-              (cdr x)
-              (ac-call (car x) (cdr x))))
-        ((null? x)
-          ;; this causes it to return null
-          ;null
-          `(quote ,x))
+          (ac-call (car x) (cdr x)))
         ((string? x)
           ((ac-string) x))
-        (else x)))
+        ((bypass? x)
+          (bypass-value x))
+        (else
+          (->racket x))))
 
 (define (ac-all x)
   (let self ((x x))
@@ -352,6 +377,31 @@
                 (list (ac (car x)))
                 (pairfn f (cddr x))))))
 
+(define (macex1 e)
+  (if (pair? e)
+      (macro? (car e)
+        (lambda (x)
+          (let ((x (apply x (cdr e))))
+            (if (bypass? x)
+                e
+                x)))
+        (lambda () e))
+      e))
+
+(define (macex e)
+  (let ((v (macex1 e)))
+    (if (eq? v e)
+        v
+        (macex v))))
+
+; TODO
+(define (is? x y)
+  (or (eqv? x y)
+      (and (string? x) (string? y) (string=? x y))
+      ;; TODO: why is this here in Arc 3.1?
+      ;(and (false? x) (false? y))
+      ))
+
 ;; Layer 6
 ; ac-quasiquote takes an Arc list containing a quasiquotation expression
 ; (the x in `x), and returns an Arc list containing Arc code.  The Arc
@@ -364,28 +414,35 @@
 (define (ac-quasiquote-atom x)
   (if (symbol? x)
       (if (hygienic-macros?)
-          (->box x)
-          (list (->orig-box 'quote) x))
-      x))
+          (if (global? x)
+              (->box x)
+              (ac (->box x)))
+          `(quote ,x)) ; TODO (list (->orig-box 'quote) x) ?
+      (ac x)))
 
-(define (ac-quasiquote x)
+(define (ac-quasiquote-start x)
   (if (pair? x)
       (let ((c (car x)))
-        (cond ((orig-box? c 'unquote)
-                (cadr x))
+        (cond ((orig-box? c 'quote) ; TODO
+                (ac-quasiquote-quote x))
+              ((orig-box? c 'unquote)
+                (ac (cadr x)))
               ((orig-box? c 'unquote-splicing)
                 (error ",@ cannot be used immediately after `"))
               ((orig-box? c 'quasiquote)
-                (ac-quasiquote (ac-quasiquote (cadr x))))
+                (ac-quasiquote-start (ac-quasiquote-start (cadr x))))
               (else
                 (ac-quasiquote-pair x))))
       (ac-quasiquote-atom x)))
 
+(define (ac-quasiquote x)
+  (bypass (ac-quasiquote-start x)))
+
 ; TODO: probably shouldn't special-case quote... figure out another way?
 (define (ac-quasiquote-quote c)
   (list cons (ac-quasiquote-pair (car c))
-             (parameterize ((hygienic-macros? #f))
-               (ac-quasiquote-pair (cdr c)))))
+             ;(parameterize ((hygienic-macros? #f)) ) TODO
+             (ac-quasiquote-pair (cdr c))))
 
 (define (ac-quasiquote-pair x)
   (if (pair? x)
@@ -393,7 +450,7 @@
               ;; TODO handle 'quote here too ?
         (cond ((and (orig-box? c 'unquote)
                     (null? (cddr x)))
-                (cadr x))
+                (ac (cadr x)))
               ((and (orig-box? c 'unquote-splicing)
                     (null? (cddr x)))
                 (error "cannot use ,@ after ."))
@@ -402,15 +459,15 @@
                         (list cons (ac-quasiquote-quote c)
                                    (ac-quasiquote-pair (cdr x))))
                       ((orig-box? (car c) 'unquote)
-                        (list cons (cadr c)
+                        (list cons (ac (cadr c))
                                    (ac-quasiquote-pair (cdr x))))
                       ((orig-box? (car c) 'unquote-splicing)
                         (if (null? (cdr x))
-                            (cadr c)
-                            (list append (cadr c)
+                            (ac (cadr c))
+                            (list append (ac (cadr c))
                                          (ac-quasiquote-pair (cdr x)))))
                       ((orig-box? (car c) 'quasiquote)
-                        (list cons (ac-quasiquote-pair (ac-quasiquote (cadr c)))
+                        (list cons (ac-quasiquote-pair (ac-quasiquote-start (cadr c)))
                                    (ac-quasiquote-pair (cdr x))))
                      (else
                        ;; TODO: code duplication
@@ -424,15 +481,29 @@
 ;=============================================================================
 ;  import
 ;=============================================================================
-; TODO: use coerce?
-(define (->string x)
+(define (->sym x)
   (cond ((symbol? x)
+          x)
+        ((string? x)
+          (string->symbol x))
+        (else
+          (error (format "can't convert ~s to a symbol" x)))))
+
+(define (->string x)
+  (cond ((string? x)
+          x)
+        ((symbol? x)
           (symbol->string x))
+        ((char? x)
+          (string x)) ; TODO ?
+        ((number? x)
+          (number->string x))
         ((path? x)
           (path->string x))
-        ((string? x)
-          x)
-        (else #f)))
+        ((bytes? x)
+          (bytes->string/utf-8 x))
+        (else
+          (error (format "can't convert ~s to a string" x)))))
 
 (define (exists? p dir file none)
   (cond ((file-exists? p)
@@ -455,10 +526,10 @@
           (exists? p dir file
             (lambda ()
                        ; TODO: don't hardcode .arc?
-              (exists? (string-append p ".arc") dir file
+              (exists? (string-append (path->string p) ".arc") dir file
                 (lambda ()
                   (self (cdr x)))))))
-        (error (string-append "file \"" p "\" was not found")))))
+        (error (format "file \"~a\" was not found" p)))))
 
 (define (globals-diff old)
   ; TODO: how am I going to handle deletions?
@@ -528,7 +599,7 @@
                            (new  (make-hasheq)))
                       (hash-diff old (globals) (lambda (key val)
                         (hash-set! new key val)))
-                      (values (cons nocompile
+                      (values (bypass
                                 `(begin ,@body))
                               new))))))
     (globals (hash-merge (globals) glob))
@@ -542,10 +613,10 @@
 
 (define (ac-fn-destructure-cdr u args)
   (when (not (null? (cdr args)))
-    (ac-fn-push u (list 'ac-cdr u)))) ; TODO
+    (ac-fn-push u (list ac-cdr u))))
 
 (define (ac-fn-destructure-car u x args)
-  (ac-fn-push x (list 'ac-car u)) ; TODO
+  (ac-fn-push x (list ac-car u))
   (ac-fn-destructure-cdr u args))
 
 (define (ac-fn-optional args)
@@ -607,10 +678,10 @@
 ;  I/O
 ;=============================================================================
 (define (read-square-brackets ch port src line col pos)
-  `(square-brackets ,@(read/recursive port #\[ #f)))
+  `(square-brackets ,(read/recursive port #\[ #f)))
 
 (define (read-curly-brackets ch port src line col pos)
-  `(curly-brackets ,@(read/recursive port #\{ #f)))
+  `(curly-brackets ,(read/recursive port #\{ #f)))
 
 #|(define (read-keyword ch port src line col pos)
   (read/recursive (input-port-append #t (open-input-string "#:") port) #f #f))|#
@@ -643,12 +714,11 @@
            (object-name x))))
 
 (define (nameit x y)
-  (when (tagged-mac? y)
+  (when (or (procedure? y)
+            (tagged-mac? y))
     ; TODO: this uses symbols rather than boxes
     (hash-set! names y x))
-  (if (procedure? y)
-      (procedure-rename y x)
-      y))
+  y)
 
 (define (print-w/name x l m r port)
   (let ((x (->name x)))
@@ -686,43 +756,94 @@
 ;=============================================================================
 ;  Boxes
 ;=============================================================================
-(define (set!-box name a b f)
-  (let* ((b  (if (global? a)
-                 (list 'nameit `(quote ,a) (ac b)) ; TODO
-                 (ac b)))
-         (a  (if (symbol? a)
-                 (f a)
-                 a)))
-    (if (box? a)
-        (if (box-set a)
-            (ac ((box-set a) (cons nocompile b))) ; TODO: ew, but I don't know of a better way
-            `(set! ,(box-uniq a) ,b))
-        (error (string-append "first argument to " name " must be a symbol:") a))))
+(define (ac-set-box a a2 b name first)
+  (if (box? a2)
+      (cond ((and (not first) (box-const? a2))
+              (error (format "~a is immutable" a)))
+            ((box-parameter? a2)
+              (if first
+                  ; TODO code duplication
+                  `(set! ,(box-uniq a2) ,b)
+                  (list (box-uniq a2) b)))
+            (else
+              `(set! ,(box-uniq a2) ,b)))
+      (error (format "first argument to ~a must be a symbol: ~a" name a2))))
 
-(define (ac-assign1 a b)
-  (set!-box "assign" a b ->box))
+(define (ac-nameit a b)
+  (if (global? a)
+      (list nameit `(quote ,a) (ac b))
+      (ac b)))
 
-(define (ac-var a b)
-  (set!-box "var" a b
-    (lambda (x)
+(define (set!-box name a b f #:first [first #f])
+  (let* ((b   (ac-nameit a b))
+         (a2  (if (symbol? a)
+                  (f a)
+                  a)))
+    (ac-set-box a a2 b name first)))
+
+(define (set!-box-recursive name a b f)
+  (let* ((a2  (if (symbol? a)
+                  (f a)
+                  a))
+         (b   (ac-nameit a b)))
+    (ac-set-box a a2 b name #t)))
+
+(define (ac-assign1 a b name each)
+  #|(when (and (global? a)
+             (assigned-globals))
+    (displayln a)
+    (hash-set! (assigned-globals) a #t))|#
+  (if (and each (pair? a))
+      (set!-box name (car a) (each a b) ->box)
+      (set!-box name a b ->box))
+    #|(lambda (x)
       (if (hyper-static?)
-          (if (local?)
-              (let ((x (make-local-box x)))
-                (ac-fn-push (box-uniq x) #f)
-                x)
-              (make-global-box x))
-          (->box x)))))
+          (->box x)
+          (->global-alias x)))|#
+)
+
+(define (make-new-box x)
+  (if (local?)
+      (let ((x (make-local-box x)))
+        (ac-fn-push (box-uniq x) #f)
+        x)
+      (make-global-box x)))
+
+(define (ac-var1 a b name make)
+  (set!-box name a b #:first #t
+    (lambda (x)
+      (parameterize ((box-constructor make))
+        (make-new-box x)))))
+
+(define (ac-const1 a b name)
+  (set!-box-recursive name a b
+    (lambda (x)
+      (parameterize ((box-constructor box-const))
+        (let ((x (make-new-box x)))
+          (procedure-var (hash-set (procedure-var) (box-uniq x) #t))
+          x)))))
 
 (define (make-global-box x)
-  (let ((r (make-box x (filename))))
+  (let ((r ((box-constructor) x (filename))))
     (globals (hash-set (globals) x r))
     (let ((hash (exported-globals)))
       (when hash
         (hash-set! hash x r)))
     r))
 
+#|(define (->global-alias x)
+  (if-global x
+    (lambda (y)
+      (let ((x (make-global-box x)))
+        (set-box-alias! x y)
+        ;(set-box-get! x (lambda ()  (ac y)))
+        ;(set-box-set! x (lambda (x) `(set! ,(ac y) ,x)))
+        x))
+    (lambda ()
+      (->box x))))|#
+
 (define (make-local-box x)
-  (let ((r (make-box x (filename))))
+  (let ((r ((box-constructor) x (filename))))
     (locals (hash-set (locals) x r))
     r))
 
@@ -764,20 +885,26 @@
   (and (symbol? x)
        (not (hash-has-key? (locals) x))))
 
-(define (lookup x yes no)
-  (when (and (global? x)
-             (hash-has-key? (globals) x))
-    (set! x (hash-ref (globals) x)))
-  (if (box? x)
-      (let* ((u (gensym))
-             (x (namespace-variable-value
-                  (box-uniq x)
-                  #f
-                  (lambda () u))))
-        (if (eq? x u)
-            (no)
-            (yes x)))
+(define (if-global x yes no)
+  (if (and (global? x)
+           (hash-has-key? (globals) x))
+      (yes (hash-ref (globals) x))
       (no)))
+
+(define (lookup-raw x yes no)
+  (let* ((u (gensym))
+         (x (namespace-variable-value x #t (lambda () u))))
+    (if (eq? x u)
+        (no)
+        (yes x))))
+
+(define (lookup x yes no)
+  (let ((x (if-global x
+             (lambda (x) x)
+             (lambda ()  x))))
+    (if (box? x)
+        (lookup-raw (box-uniq x) yes no)
+        (no))))
 
 (define (set-raw n v)
   (namespace-set-variable-value!
@@ -793,7 +920,7 @@
          (body (ac-all body))
          (new  (globals)))
     (globals (f old new))
-    (cons nocompile
+    (bypass
       `(begin ,@body))))
 
 (define (w/exclude1 old new x)
@@ -817,27 +944,57 @@
           (ac (car args)))
         (else
           ;; TODO: fix this if I expose true? to Arc
-          `(if (true? ,(ac (car args))) ; TODO
+          `(if (,true? ,(ac (car args)))
                ,(ac (cadr args))
                ,(ac-if1 (cddr args))))))
 
-(define (ac-assign args)
-  (cons nocompile
-    `(begin ,@(pairfn ac-assign1 args))))
+(define (ac-assign args name #:each [each #f])
+  (bypass
+    `(begin ,@(pairfn (lambda (x y) (ac-assign1 x y name each)) args))))
+
+(define (ac-var args name #:make [make make-box])
+  (bypass
+    `(begin ,@(pairfn (lambda (x y) (ac-var1 x y name make)) args))))
+
+(define (ac-const args name)
+  (parameterize ((procedure-var (procedure-var)))
+    (bypass
+      `(begin ,@(pairfn (lambda (x y) (ac-const1 x y name)) args)))))
 
 (define (ac-quote x)
   (let ((x (dottedrec sym->nil x)))
-    (cons nocompile `(quote ,x))))
+    (bypass `(quote ,x))))
 
 (define (ac-if args)
-  (cons nocompile (ac-if1 args)))
+  (bypass (ac-if1 args)))
 
 (define (ac-fn parms body)
-  (cons nocompile (ac-fn1 parms body)))
+  (bypass (ac-fn1 parms body)))
+
+(define (ac-uniq name num)
+  (when (false? num)
+    (set! num (uniq-counter))
+    (uniq-counter (+ (uniq-counter) 1)))
+  (string->uninterned-symbol
+    (string-append (->string name)
+                   (->string num))))
+
+(define (%1 x)
+  (if (and (symbol? x)
+           (symbol-interned? x))
+      (lookup-raw x
+        (lambda (f)
+          ;(if (procedure? f) f x)
+          f)
+        (lambda () x))
+      x))
 
 (define (% args)
-  (cons nocompile
-    `(begin ,@args)))
+  (bypass
+    (let ((args (dottedrec %1 args)))
+      (if (null? (cdr args))
+          (car args)
+          `(begin ,@args)))))
 
 (define (w/include x body)
   (w/-maker body (lambda (old new)
@@ -883,29 +1040,32 @@
     (ac-load x #:reimport #t))
   nil)
 
+; TODO: move orig-box stuff into arc/3.1/main
 (define (init)
-  (make-global-box 'fn)
-  (make-global-box 'and)
-  (make-global-box 'compose)
-  (make-global-box 'complement)
-  (make-global-box 'no)
-  (make-global-box 'andf)
-  (make-global-box 'string)
-  (make-global-box 'quote)
-  (make-global-box 'unquote)
-  (make-global-box 'unquote-splicing)
-  (make-global-box 'quasiquote)
-  (make-global-box 'get)
-)
+  (parameterize ((box-constructor make-box))
+    (make-global-box 'fn)
+    (make-global-box 'and)
+    (make-global-box 'compose)
+    (make-global-box 'complement)
+    (make-global-box 'no)
+    (make-global-box 'andf)
+    (make-global-box 'string)
+    (make-global-box 'quote)
+    (make-global-box 'unquote)
+    (make-global-box 'unquote-splicing)
+    (make-global-box 'quasiquote)
+    (make-global-box 'get)))
 
 (define (ac-init f)
-  (parameterize ((ac-read          read)
+  (parameterize ((compile-allow-set!-undefined #f)
+                 (ac-read          read)
                  (ac-fn-call       (lambda (x f args done) (done)))
                  (ac-mac-call      (lambda (c f args done) (done)))
-                 (ac-string        (lambda (s) (string-copy s))) ; avoid immutable strings
+                 (ac-string        (lambda (s) s))
                  (ac-ssexpand      (lambda (x) x))
                  (hygienic-macros? #f)
                  (hyper-static?    #f)
+                 (box-constructor  make-box)
                  (globals          (orig-globals)))
     (f)))
 
@@ -918,11 +1078,13 @@
                  (exec-dir          dir)
                  (import-dirs       (list ;(path->string (current-directory)) ; TODO
                                           (path->string (build-path dir "lib"))
-                                          (path->string dir)))
+                                          ;(path->string dir)
+                                          ))
                  (import-cache      (make-hash))
                  (lang-cache        (make-hash))
                  (globals           (hasheq))
                  (locals            (hasheq))
+                 (procedure-var     (hasheq))
                  (uniq-counter      1))
     (init)
     (parameterize ((orig-globals (globals)))

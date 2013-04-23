@@ -47,9 +47,9 @@ New Features
 
 * New macros:
 
-  * ``{...}`` expands to ``(curly-brackets ...)``
+  * ``{...}`` expands to ``(curly-brackets (...))``
 
-  * ``[...]`` expands to ``(square-brackets ...)``
+  * ``[...]`` expands to ``(square-brackets (...))``
 
   * ``%`` lets you use Racket stuff from within Arc::
 
@@ -127,13 +127,13 @@ New Features
     > do
     #<mac:do>
 
-* ``[a b c]`` is expanded into ``(square-brackets a b c)`` which is then
+* ``[a b c]`` is expanded into ``(square-brackets (a b c))`` which is then
   implemented as a macro::
 
-    (mac square-brackets body
+    (mac square-brackets (body)
       `(fn (_) ,body))
 
-  Likewise, ``{a b c}`` is expanded into ``(curly-brackets a b c)``
+  Likewise, ``{a b c}`` is expanded into ``(curly-brackets (a b c))``
 
   This makes it easy to change the meaning of ``[...]`` and ``{...}`` from
   within Arc

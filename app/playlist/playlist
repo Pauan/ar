@@ -6,24 +6,25 @@
 (var playlists  nil)
 (var folders    nil)
 
-(var version      "2.0"
-     options      {}
+(var version      "3.0"
+     options      (hash)
 
      strings      nil
      errors       nil
-     files        {}
+     files        (hash)
 
-     filetypes    ["flac" "flv" "mid" "mkv"  "mp3" "mp4"
-                   "ogg"  "ogm" "wav" "webm" "wma"]
+     filetypes    (list "flac" "flv" "mid" "mkv"  "mp3" "mp4"
+                        "ogg"  "ogm" "wav" "webm" "wma")
 
      script-args  (w/parse-args script-args
                     ("-v" "--version" ()
                       "Displays the version number and exits"
                       (prn version)
                       (quit))
-                    ("-d" "--debug" ()
+                    #|("-d" "--debug" ()
                       "Prints additional messages"
-                      (= debug? t))))
+                      (= debug? t))|#
+                    ))
                     ;((in)  "Folder where you keep your templates")
                     ;((out) "Folder where the .xspf files are written to")
 
@@ -35,13 +36,13 @@
                      (some (sym:downcase:extension x) exts)))))))
 
 (def process-string (x)
-  (regexp (%.regexp-quote x)))
+  (->re (re-escape x)))
 
 (def process-folder (x)
-  (regexp:string "(?:^|/)"
-                 (%.regexp-quote x)
-                             ; TODO use last
-                 (unless (is (x:- len.x 1) #\/) "/")))
+  (->re:string "(?:^|/)"
+               (re-escape x)
+                           ; TODO use last
+               (unless (is (x:- len.x 1) #\/) "/")))
 
 (def insert-file (x)
   (push (list x process-string.x folders rev.playlists)
@@ -74,8 +75,8 @@
           x
           (let (pat proc folders playlists) x
             (withs (f  (trues (fn (file)
-                                (and (%.regexp-match? proc file)
-                                     (all [or (%.regexp-match? _ file) nil] folders)
+                                (and (re? proc file)
+                                     (all [or (re? _ file) nil] folders)
                                      file))
                               files)
                     c  car.f)

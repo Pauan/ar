@@ -62,7 +62,7 @@
                                x))
                          (codestring s))))
           (unescape-ats s))
-      ;; This is for normal strings
+      ; avoid immutable strings
       (string-copy s))))
 
 ;=============================================================================
@@ -249,23 +249,6 @@
 ;=============================================================================
 ;  Macro/function stuff
 ;=============================================================================
-(define (macex1 e)
-  (if (pair? e)
-      (macro? (car e)
-        (lambda (x)
-          (let ((x (apply x (cdr e))))
-            (if (eq? (car x) nocompile)
-                e
-                x)))
-        (lambda () e))
-      e))
-
-(define (macex e)
-  (let ((v (macex1 e)))
-    (if (eq? v e)
-        v
-        (macex v))))
-
 ;; the next two are optimizations, except work for macros.
 (define (de-compose fns args)
         ;; TODO: is this needed anywhere in Arc or can I remove it...?
@@ -299,7 +282,7 @@
         ;; this is much faster than direct-calls but it's even more strict:
         ;; if you redefine any global, even functions, those changes aren't
         ;; retroactive: they affect new code, but not old code
-  (cond #|(inline-calls
+  (cond #|(#t ;inline-calls
           (if (procedure? f)
               (cons f (ac-all args))
               (list* ref f (ac-all args))))|#
@@ -308,7 +291,7 @@
         ;; but as long as you don't redefine anything, it's faster
         ((and (direct-calls)
               (procedure? f))
-          (cons (ac x) (ac-all args)))
+          (cons x args))
         (else
           (done)))))
 
@@ -345,13 +328,6 @@
       (set-name 'name value))))
 
 (define (iround x) (inexact->exact (round x)))
-
-(define (is? x y)
-  (or (eqv? x y)
-      (and (string? x) (string? y) (string=? x y))
-      ;; TODO: why is this here in Arc 3.1?
-      ;(and (false? x) (false? y))
-      ))
 
 ;; generic +: strings, lists, numbers.
 ;; return val has same type as first argument.
@@ -447,7 +423,7 @@
 ;=============================================================================
 ;  Arc 3.1 special forms
 ;=============================================================================
-(mac square-brackets body
+(mac square-brackets (body)
   `(,(->orig-box 'fn) (_) ,body))
 
 (mac if args
@@ -460,7 +436,7 @@
   (ac-quasiquote x))
 
 (mac assign (x . rest)
-  (ac-assign (cons x rest)))
+  (ac-assign (cons x rest) "assign"))
 
 (mac quote (x)
   (ac-quote x))
@@ -675,12 +651,7 @@
 
 (def uniq ((name 'g) (num nil))
     #:sig ((o name 'g) (o num))
-  (when (false? num)
-    (set! num (uniq-counter))
-    (uniq-counter (+ (uniq-counter) 1)))
-  (string->uninterned-symbol
-    (string-append (coerce name 'string)
-                   (coerce num  'string))))
+  (ac-uniq name num))
 
 ; Other
 (assign t t)

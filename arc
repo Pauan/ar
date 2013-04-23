@@ -31,7 +31,7 @@
 (define exec-dir  (path-only (normalize-path (find-system-path 'run-file))))
 (define exec-path (build-path exec-dir "compiler"))
 
-(parameterize ((current-namespace (make-base-namespace)))
+(parameterize ((current-namespace (make-base-empty-namespace)))
   (namespace-require exec-path)
   ((eval 'w/init) exec-dir exec-path lang #:debug debug?
     (lambda (ac-load)
@@ -42,9 +42,7 @@
             (ac-load (car arguments))))
 
       (when (or repl? (null? arguments))
-        (load (build-path exec-dir "repl"))
-        ;(namespace-require )
-        )
+        (namespace-require (build-path exec-dir "repl")))
 
       ;; This is so that it doesn't print anything when exiting the REPL
       ; TODO is this necessary?
