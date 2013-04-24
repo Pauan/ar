@@ -6,12 +6,16 @@
   '(const-rec name (fn args . body)))
 
 (def cadr (x) (car (cdr x)))
+(def cddr (x) (cdr (cdr x)))
 
 (mac map (var x . body)
   '(map-fn (fn (var) . body) x))
 
 (mac each (var x . body)
   '(each-fn (fn (var) . body) x))
+
+(mac mappair (var x . body)
+  '(flatten (map var (pair x) . body)))
 
 (mac with-raw (names . body)
   '((fn ,(map-fn car names) . body)
@@ -23,6 +27,12 @@
 (mac let (name val . body)
   '(with (name val) . body))
 
+(mac withs (names . body)
+  (if names
+      '(let ,(car names) ,(cadr names)
+         (withs ,(cddr names) . body))
+      '(do . body)))
+
 (mac push (x xs)
   '(= xs (cons x xs)))
 
@@ -30,6 +40,9 @@
   (if (cons? x)
       x
       (list x)))
+
+(mac quasiquote (x)
+  ((% bypass) (list (sym "quasiquote") x)))
 
 (mac w/uniq (x . body)
   '(with-raw ,(map x (listify x) (list x '(uniq))) . body))
@@ -43,6 +56,15 @@
 (mac when (x . body)
   '(if x (do . body)))
 
+(mac awhen (x . body)
+  (w/sym it
+    '(let it x (when it . body))))
+
+(def not (x) (if x nil t))
+
+(mac unless (x . body)
+  '(when (not x) . body))
+
 (mac iflet (var x yes (o no))
   (w/uniq u
     '(let u x
@@ -54,15 +76,24 @@
        (= name (fn ,(map-fn car names) . body))
        (name ,@(map-fn cadr names)))))
 
-(mac alet (var val . body)
+(mac awith (names . body)
   (w/sym self
-    '(rwith self (var val) . body)))
+    '(rwith self names . body)))
 
-(mac awhenlet (x y . body)
+(mac alet (var val . body)
+  '(awith (var val) . body))
+
+(mac aloop (x y . body)
   (w/uniq u
     '(alet u y
-       (when u
-         (let x u . body)))))
+       (if (cons? u)
+           (let x u . body)
+           u))))
+
+(mac while (test . body)
+  (w/uniq u
+    '(rwith u ()
+       (when test ,@body (u)))))
 
 (mac case (x . body)
   (w/uniq u
@@ -83,6 +114,54 @@
                      (fn () . body)
                      (fn () (= x u))))))
 
+; TODO multi-arg version
+(def isnt (x y)
+  (not (is x y)))
+
+(mac and args
+  (if args
+      (if (cdr args)
+          '(if ,(car args) (and ,@(cdr args)))
+          (car args))
+      t))
+
+(mac or args
+  ; TODO is this and necessary?
+  (and args
+       (w/uniq g
+         '(let g ,(car args)
+            (if g g (or ,@(cdr args)))))))
+
+(def split (xs n)
+  ; TODO some sort of aloop variant
+  (awith (xs xs
+          n  n
+          r  nil)
+    (if (and (cons? xs)
+             (> n 0))
+        (self (cdr xs) (- n 1) (cons (car xs) r))
+        (list (rev r) xs))))
+
+(def tuple (xs n)
+  (when xs
+    (let (left right) (split xs n)
+      (cons left (tuple right n)))))
+
+(mac defs args
+  (let args (tuple args 3)
+    '(const-rec ,@(flatten (map (name args body) args
+                             (list name '(fn args body)))))))
+#|
+'(do ,@(map (n) args '(var n))
+         ,@(map (n args body) args '(= n (fn args body)))
+         ,@(map (n) args '(const n n)))
+|#
+
+(def ->input (x)
+  (if (str? x)
+      ((% open-input-string) x)
+      x))
+
 (def dotted? (x)
   (when x
     (if (cons? x)
@@ -95,15 +174,17 @@
         (cons (car x) (dotted->list (cdr x)))
         (list x))))
 
-#|(mac square-brackets (args)
+(mac square-brackets (args)
   (if (dotted? args)
       '(list* ,@(dotted->list args))
       '(list . args)))
 
 (mac curly-brackets (args)
-  '(hash . args))|#
+  '(dict ,@(mappair (x y) args (list (str x) y))))
 
-(prn ((% ac) '(case 1
+(parameter-var stdin (% current-input-port))
+
+#|(prn ((% ac) '(case 1
        1 2
        2 3
-         4)))
+         4)))|#

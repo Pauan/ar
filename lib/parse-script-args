@@ -1,5 +1,5 @@
-(var script-arg-options     (hash))
-;(var script-arg-help        (hash))
+(var script-arg-options     (dict))
+;(var script-arg-help        (dict))
 (var script-register-help?  t)
 
 (def call-script-arg (x rest)
@@ -8,7 +8,7 @@
           (err "invalid option " x))))
 
 (def parse-args (x)
-  (awhenlet (x . rest) x
+  (aloop (x . rest) x
     (re-multi x
       "^--.*$"  (fn (x)
                   (if (is x "--")
@@ -32,7 +32,7 @@
 
 (mac register-script-arg args
   (let opts nil
-    (awhenlet (x . rest) args
+    (aloop (x . rest) args
       (if (string? x)
           (do (push x opts)
               (self rest))
@@ -40,16 +40,15 @@
                  help  (car rest)
                  body  (cdr rest))
             '(do ,@(map x opts
-                     '(= script-arg-options
-                        (hash-set script-arg-options x
-                          ,(if (dotted? args)
-                               '(fn (args)
-                                  ,@body
-                                  nil)
-                               (w/uniq u
-                                 '(fn (,(add-dotted args u))
-                                    ,@body
-                                    u))))))))))))
+                     '(= (script-arg-options x)
+                         ,(if (dotted? args)
+                              '(fn (args)
+                                 ,@body
+                                 nil)
+                              (w/uniq u
+                                '(fn (,(add-dotted args u))
+                                   ,@body
+                                   u)))))))))))
 
 #|(def print-script-help ()
   (pr "Usage: ")
@@ -66,12 +65,12 @@
   (each x rev.script-arg-groups
     (let h (script-arg-options car.x)
       (pr "  ")
-      (awhenlet (x . rest) x
+      (aloop (x . rest) x
         (pr x)
         (when rest
           (pr ", ")
           (self rest)))
-      (awhenlet x h!args
+      (aloop x h!args
         (if acons.x
             (let c car.x
               (if (caris c 'o)
@@ -142,7 +141,7 @@
        (err "unknown option" x)))
 
 (def parse-args (x)
-  (awhenlet (x . rest) x
+  (aloop (x . rest) x
     (if (is x "--")
           rest
         (is x.0 #\-)

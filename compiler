@@ -15,6 +15,7 @@
 
 (require racket/unsafe/ops)
 (require racket/path)
+(require racket/list)
 
 ;; Layer 1
 (define names            (make-hasheq))
@@ -82,12 +83,15 @@
 (define (rel-path x)
   (build-path (current-load-relative-directory) x))
 
+(define (list? x)
+  (or (pair? x) (null? x)))
+
 ; TODO: is there seriously no built-in way to do this?
 (define (->pair x)
   (cond ((null? x)
           x)
         ((null? (cdr x))
-          (list (list (car x))))
+          (list (list (car x) null)))
         (else
           (cons (list (car x) (cadr x))
                 (->pair (cddr x))))))
@@ -366,17 +370,6 @@
               (self (cdr x)))
         x)))
 
-(define (pairfn f x)
-  (if (null? (cdr x))
-      (cons (f (car x) null)
-            ;; this is so the assign form returns the value
-            (list (ac (car x))))
-               ;; TODO: why does Arc 3.1 call macex here?
-      (cons (f (car x) (cadr x))
-            (if (null? (cddr x))
-                (list (ac (car x)))
-                (pairfn f (cddr x))))))
-
 (define (macex1 e)
   (if (pair? e)
       (macro? (car e)
@@ -489,13 +482,18 @@
         (else
           (error (format "can't convert ~s to a symbol" x)))))
 
+(define (->all-string args)
+  (apply string-append (map ->string args)))
+
 (define (->string x)
   (cond ((string? x)
           x)
         ((symbol? x)
           (symbol->string x))
         ((char? x)
-          (string x)) ; TODO ?
+          (string x)) ; TODO is this needed ?
+        ((list? x)
+          (->all-string x))
         ((number? x)
           (number->string x))
         ((path? x)
@@ -507,9 +505,9 @@
 
 (define (exists? p dir file none)
   (cond ((file-exists? p)
-          (file (path->string p)))
+          (file p))
         ((directory-exists? p)
-          (dir (path->string p)))
+          (dir p))
         (else
           (none))))
 
@@ -522,11 +520,11 @@
 (define (find-filename p dir file)
   (let self ((x (import-dirs)))
     (if (pair? x)
-        (let ((p (abspath p (car x))))
+        (let ((p (path->string (abspath p (car x)))))
           (exists? p dir file
             (lambda ()
                        ; TODO: don't hardcode .arc?
-              (exists? (string-append (path->string p) ".arc") dir file
+              (exists? (string-append p ".arc") dir file
                 (lambda ()
                   (self (cdr x)))))))
         (error (format "file \"~a\" was not found" p)))))
@@ -781,13 +779,6 @@
                   a)))
     (ac-set-box a a2 b name first)))
 
-(define (set!-box-recursive name a b f)
-  (let* ((a2  (if (symbol? a)
-                  (f a)
-                  a))
-         (b   (ac-nameit a b)))
-    (ac-set-box a a2 b name #t)))
-
 (define (ac-assign1 a b name each)
   #|(when (and (global? a)
              (assigned-globals))
@@ -814,14 +805,6 @@
     (lambda (x)
       (parameterize ((box-constructor make))
         (make-new-box x)))))
-
-(define (ac-const1 a b name)
-  (set!-box-recursive name a b
-    (lambda (x)
-      (parameterize ((box-constructor box-const))
-        (let ((x (make-new-box x)))
-          (procedure-var (hash-set (procedure-var) (box-uniq x) #t))
-          x)))))
 
 (define (make-global-box x)
   (let ((r ((box-constructor) x (filename))))
@@ -949,17 +932,44 @@
                ,(ac-if1 (cddr args))))))
 
 (define (ac-assign args name #:each [each #f])
-  (bypass
-    `(begin ,@(pairfn (lambda (x y) (ac-assign1 x y name each)) args))))
+  (let ((args (->pair args)))
+    (bypass
+      `(begin ,@(map (lambda (x) (ac-assign1 (car x) (cadr x) name each))
+                     args)
+              ,(ac (car (last args)))))))
 
 (define (ac-var args name #:make [make make-box])
-  (bypass
-    `(begin ,@(pairfn (lambda (x y) (ac-var1 x y name make)) args))))
+  (let ((args (->pair args)))
+    (bypass
+      `(begin ,@(map (lambda (x) (ac-var1 (car x) (cadr x) name make))
+                     args)
+              ,(ac (car (last args)))))))
+
+(define (zip x)
+  (apply map list x))
+
+(define (ac-const1 x)
+  (if (symbol? x)
+      (parameterize ((box-constructor box-const))
+        (let ((x (make-new-box x)))
+          (procedure-var (hash-set (procedure-var) (box-uniq x) #t))
+          x))
+      x))
 
 (define (ac-const args name)
   (parameterize ((procedure-var (procedure-var)))
-    (bypass
-      `(begin ,@(pairfn (lambda (x y) (ac-const1 x y name)) args)))))
+    (let* ((args   (->pair args))
+           (boxes  (map (lambda (x)
+                          (ac-const1 (car x)))
+                        args))
+           (vals   (map (lambda (x)
+                          (ac-nameit (car x) (cadr x)))
+                        args)))
+      (bypass
+        `(begin ,@(map (lambda (x)
+                         (ac-set-box (car x) (cadr x) (caddr x) name #t))
+                       (zip (list (map car args) boxes vals)))
+                ,(ac (last boxes)))))))
 
 (define (ac-quote x)
   (let ((x (dottedrec sym->nil x)))

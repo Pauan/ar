@@ -52,12 +52,15 @@
   (ac-var (cons x rest) "const" #:make box-const))
 
 (mac const-rec (x . rest)
-  (ac-const (cons x rest) "def-const"))
+  (ac-const (cons x rest) "const-rec"))
+
+(def sref (x v k)
+  (hash-set x k v))
 
 (mac = (x . rest)
   (ac-assign (cons x rest) "="
     #:each (lambda (x y)
-             (list hash-set (car x) (cadr x) y))))
+             (list* (->box 'sref) (car x) y (cdr x)))))
 
 (mac if args
   (ac-if args))
@@ -97,11 +100,24 @@
   ; TODO; is this inefficient?
   (apply apply call f args))
 
-(const is (make-pairwise is?))
+(const is (make-pairwise equal?))
 
-; TODO should probably be in compiler
-(define (->all-string args)
-  (apply string-append (map ->string args)))
+; TODO
+(def on-err (errfn f)
+  (with-handlers ((exn:fail? errfn)) (f)))
+
+; TODO
+(const details exn-message)
+
+(const peek peek-char)
+(const read read-char)
+(const < <)
+(const > >)
+(const >= >=)
+(const <= <=)
+(const - -)
+(const rev reverse)
+(const eof? eof-object?)
 
 (def str args
   (->all-string args))
@@ -112,8 +128,17 @@
 (def uniq ()
   (ac-uniq 'g nil))
 
-(def prn (x)
-  (displayln x))
+(def pr args
+  (for ((x (add-between args " ")))
+    (display x)))
+
+(def write (x)
+  (write x))
+
+(def prn args
+  (for ((x (add-between args " ")))
+    (display x))
+  (newline))
 
 (def sym args
   (->sym (->all-string args)))
@@ -127,15 +152,94 @@
 (const dynamic-wind dynamic-wind)
 (const pair ->pair)
 
-(const map-fn  map)
-(const each-fn for-each)
+(def flatten (x)
+  (apply append x))
 
+; TODO should this be a macro, so it can re-eval x every time?
+(const n-of make-list)
+#|(def n-of (i x)
+  (build-list i (lambda (_) x)))|#
+
+#|(def tuple (x num)
+  (let self ((x x)
+             (r (list null))
+             (i num))
+    (if (> i 0)
+        (if (pair? x)
+            (self (cdr x) (cons (cons (car x) (car r)) (cdr r)) (- i 1))
+            (self x       (cons (cons null    (car r)) (cdr r)) (- i 1)))
+        (if (null? x)
+            (reverse r)
+            (self x (cons null r) num)))))|#
+
+(def map-fn (f x)
+  (cond ((list? x)
+          (map f x))
+        ((hash? x)
+                   ; TODO: should be the same type as the input
+          (let ((y (hash)))
+            (hash-for-each x (lambda (key val)
+                               (apply (lambda (key val)
+                                        (set! y (hash-set y key val)))
+                                      (f (list key val)))))
+            y))
+        ((string? x)
+          (->all-string (map f (string->list x))))
+        (else
+          (error (format "~s cannot be iterated" x)))))
+
+(def each-fn (f x)
+  (cond ((list? x)
+          (for-each f x))
+        ((hash? x)
+          (hash-for-each x (lambda (key val) (f (list key val)))))
+        ((string? x)
+          (for ((c (in-string x)))
+            (f c)))
+        (else
+          (error (format "~s cannot be iterated" x))))
+  nil)
+
+(const + +)
 (const list list)
 (const list* list*)
-(const hash hash)
+(const dict hash)
 ;(const hash-set hash-set)
 
+(def port-position (x)
+  (let-values (((line col pos) (port-next-location x))) (list line col pos)))
+
+(def last (x)
+  (cond ((string? x)
+          (let ((i (string-length x)))
+            (if (= i 0)
+                nil
+                (string-ref x (- i 1)))))
+        ((null? x)
+          x)
+        (else
+          (last x))))
+
+(def cut (x start end)
+  (let ((end (if (< end 0)
+                 (+ (string-length x) end)
+                 end)))
+    (cond ((string? x)
+            (substring x start end))
+
+          )))
+
 (const t t)
+
+(def join (s x)
+  (->all-string
+    (let self ((x x))
+      (if (and (cons? x)
+               (cons? (cdr x)))
+          (list* (car x)
+                 s
+                 (self (cdr x)))
+          x))))
 
 (def err args
   (error (apply string-append (map ->string args))))
@@ -143,13 +247,17 @@
 (const reduce-fn reduce)
 
 (def ->cons (x)
-  (cond ((pair? x)    x)
-        ((null? x)    x)
+  (cond ((list? x)    x)
         ((string? x)  (string->list x))
         (else         (error (format "can't convert ~s to a cons" x)))))
 
 (const macex1 macex1)
-(const len length)
+
+; TODO code duplication with arc/3.1/main
+(def len (x)
+  (cond ((string? x)  (string-length x))
+        ((hash? x)    (hash-count x))
+        (else         (length x))))
 
 ; Conses
 (const nil nil)

@@ -3,31 +3,37 @@
       ((% pregexp) pattern)
       pattern))
 
-(def ->input (x)
-  (if (str? x)
-      ((% open-input-string) x)
-      x))
-
 (const re-escape (% regexp-quote))
 
-(def re (pat str)
-  (let f (if (str? str)
+(def re (pat in)
+  (let f (if (str? in)
              (% regexp-match)
              (% regexp-try-match))
-    (let f (f pat str)
-      (if f (map-fn str f) f)))) ; TODO or
+    (let f (f (->re pat) in)
+      (and f (map-fn str f)))))
 
-(def re? (pat str)
-  ((% tnil) ((% regexp-match?) pat str)))
+(def re1 (pat in)
+  (car (re pat in)))
+
+(def re? (pat in)
+  ((% tnil) ((% regexp-match?) (->re pat) in)))
+
+(def re-pos* (pat in)
+  (or ((% regexp-match-positions*) (->re pat) in) nil))
+
+(def re-pos (pat in)
+  (car (or ((% regexp-match-positions) (->re pat) in) nil)))
+
+(def re-replace (pat in replace)
+  ((% regexp-replace) (->re pat) in replace))
 
 (mac re-multi (x . body)
   (w/uniq (u v)
     '(let u x
-       ,(alet body (pair body)
-          (iflet ((pat f) . rest) body
-            '(iflet v (re pat u)
-               (apply f v)
-               ,(self rest)))))))
+       ,(aloop ((pat f) . rest) (pair body)
+          '(iflet v (re pat u)
+             (apply f v)
+             ,(self rest))))))
 
 #|(mac w/re-matcher (vars match (o after))
   (w/uniq u

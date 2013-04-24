@@ -3,15 +3,15 @@
         strings ; Only needed for urlencode-path
         sxml)
 
-(var playlists  nil)
-(var folders    nil)
-
 (var version      "3.0"
-     options      (hash)
+     options      (dict)
+
+     playlists    nil
+     folders      nil
 
      strings      nil
      errors       nil
-     files        (hash)
+     files        (dict)
 
      filetypes    (list "flac" "flv" "mid" "mkv"  "mp3" "mp4"
                         "ogg"  "ogm" "wav" "webm" "wma")
@@ -50,7 +50,7 @@
 
 (def normalize-file (k v)
   (w/ playlists (cons k playlists)
-    (awhenlet (x . rest) v
+    (aloop (x . rest) v
       (if acons.x
           (case car.x
             "title"    (= playlists (cons cadr.x cdr.playlists))

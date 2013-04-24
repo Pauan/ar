@@ -92,6 +92,7 @@
     (apply printf "~a  iter: ~a   gc: ~a   diff: ~a%~n" x)))
 
 (define (print x)
+  (newline)
   (let ((lowest (caadr (argmin caadr x))))
     (print-table
       (map (lambda (x)
@@ -117,10 +118,7 @@
                         (lambda ()
                           (let ((f (eval `(lambda ()
                                             ,(ac (read (open-input-string x)))))))
-                            #|(display (f))
-                            (display "  ")
-                            (display (ac (read (open-input-string x))))
-                            (newline)|#
+                            (printf "~a  ~a  ~a~n" name (f) (ac (read (open-input-string x))))
                             (let ((time (/ time iter)))
                               (let loop ((x iter)
                                          (r null))
@@ -137,28 +135,28 @@
                  (current-readtable (current-readtable)))
     . body))
 
-(define arc3-namespace
-  (w/ arc3-dir (make-base-empty-namespace)
-    (namespace-require 'mzscheme)
-    (namespace-require "ac.scm")
-    (namespace-require "brackets.scm")
-    (eval '(use-bracket-readtable))
-    (eval '(aload "arc.arc"))
-    (list "Arc 3.1"
-      (current-parameterization)
-      (eval 'read)
-      (lambda (x)
-        ((eval 'ac) x '())))))
-
-(define nu-namespace
+(define (make-nu-lang lang)
   (w/ nu-dir (make-base-empty-namespace)
     (define nu-path (build-path nu-dir "compiler"))
     (namespace-require nu-path)
-    ((eval 'w/init) nu-dir nu-path "arc/3.1"
+    ((eval 'w/init) nu-dir nu-path lang
       (lambda (ac-load)
-        (list "Arc/Nu "
+        (list lang
           (current-parameterization)
           ((eval 'ac-read))
           (eval 'ac))))))
 
-(doit arguments (list nu-namespace arc3-namespace))
+(doit arguments
+  (list (make-nu-lang "arc/nu")
+        (make-nu-lang "arc/3.1")
+        (w/ arc3-dir (make-base-empty-namespace)
+          (namespace-require 'mzscheme)
+          (namespace-require "ac.scm")
+          (namespace-require "brackets.scm")
+          (eval '(use-bracket-readtable))
+          (eval '(aload "arc.arc"))
+          (list "Arc 3.1"
+            (current-parameterization)
+            (eval 'read)
+            (lambda (x)
+              ((eval 'ac) x '()))))))
