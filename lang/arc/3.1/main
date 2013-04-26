@@ -55,7 +55,8 @@
 (ac-string (lambda (s)
   (if (atstrings)
       (if (atpos s 0)
-          (ac (cons (->orig-box 'string)
+                    ; TODO ->orig-box
+          (ac (cons (->box 'string)
                     (map (lambda (x)
                            (if (string? x)
                                (unescape-ats x)
@@ -190,8 +191,10 @@
   (let ((elts (map (lambda (tok)
                      (if (eqv? (car tok) #\~)
                          (if (null? (cdr tok))
-                             (->orig-box 'no)
-                             (list (->orig-box 'complement) (chars->value (cdr tok))))
+                             ; TODO ->orig-box
+                             (->box 'no)
+                                   ; TODO ->orig-box
+                             (list (->box 'complement) (chars->value (cdr tok))))
                          (chars->value tok)))
                    (tokens (lambda (c) (eqv? c #\:))
                            (symbol->chars sym)
@@ -200,17 +203,20 @@
                            #f))))
     (if (null? (cdr elts))
         (car elts)
-        (cons (->orig-box 'compose) elts))))
+              ; TODO ->orig-box
+        (cons (->box 'compose) elts))))
 
 (define (build-sexpr toks orig)
   (cond ((null? toks)
-          (->orig-box 'get))
+          ; TODO ->orig-box
+          (->box 'get))
         ((null? (cdr toks))
           (chars->value (car toks)))
         (else
           (list (build-sexpr (cddr toks) orig)
                 (if (eqv? (cadr toks) #\!)
-                    (list (->orig-box 'quote) (chars->value (car toks)))
+                          ; TODO ->orig-box
+                    (list (->box 'quote) (chars->value (car toks)))
                     (if (or (eqv? (car toks) #\.) (eqv? (car toks) #\!))
                         (error "bad ssyntax" orig)
                         (chars->value (car toks))))))))
@@ -224,7 +230,8 @@
                            #f))))
     (if (null? (cdr elts))
         (car elts)
-        (cons (->orig-box 'andf) elts))))
+              ; TODO ->orig-box
+        (cons (->box 'andf) elts))))
 
 (define (expand-sexpr sym)
   (build-sexpr (reverse (tokens (lambda (c) (or (eqv? c #\.) (eqv? c #\!)))
@@ -258,17 +265,23 @@
 
 (define (de-andf f args)
   (let ((gs (map (lambda (x) (gensym)) args)))
-    `((,(->orig-box 'fn) ,gs
-        (,(->orig-box 'and) ,@(map (lambda (f) (cons f gs))
-                                   (cdr f))))
+        ; TODO ->orig-box
+    `((,(->box 'fn) ,gs
+          ; TODO ->orig-box
+        (,(->box 'and) ,@(map (lambda (f) (cons f gs))
+                                (cdr f))))
       ,@args)))
 
 (ac-mac-call (lambda (c f args done)
-  (cond ((orig-box? c 'compose)
+        ; TODO orig-box?
+  (cond ((eq? c 'compose)
           (ac (de-compose (cdr f) args)))
-        ((orig-box? c 'complement)
-          (ac (list (->orig-box 'no) (cons (cadr f) args))))
-        ((orig-box? c 'andf)
+        ; TODO orig-box?
+        ((eq? c 'complement)
+                    ; TODO ->orig-box
+          (ac (list (->box 'no) (cons (cadr f) args))))
+        ; TODO orig-box?
+        ((eq? c 'andf)
           (ac (de-andf f args)))
         (else
           (done)))))
@@ -424,7 +437,8 @@
 ;  Arc 3.1 special forms
 ;=============================================================================
 (mac square-brackets (body)
-  `(,(->orig-box 'fn) (_) ,body))
+     ; TODO ->orig-box
+  `(,(->box 'fn) (_) ,body))
 
 (mac if args
   (ac-if args))

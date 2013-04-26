@@ -70,6 +70,14 @@
     '(let u x
        (if u (let var u yes) no))))
 
+(mac collect body
+  (w/sym yield
+    (w/uniq (u v)
+      '(let u nil
+         (let yield (fn (v) (push v u))
+           ,@body
+           (rev u))))))
+
 (mac rwith (name names . body)
   (let names (pair names)
     '(let name nil
@@ -156,6 +164,14 @@
          ,@(map (n args body) args '(= n (fn args body)))
          ,@(map (n) args '(const n n)))
 |#
+
+(mac until (var x . body)
+  (w/uniq (r y self)
+    '(rwith self (r  nil
+                  y  x)
+       (if (let var y . body)
+           (list (rev r) y)
+           (self (cons (car y) r) (cdr y))))))
 
 (def ->input (x)
   (if (str? x)

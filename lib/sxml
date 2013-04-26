@@ -1,35 +1,38 @@
-;;  sxml.arc: converts S-expressions into XML
+;; converts S-expressions into XML
 
-(var xml-declaration* "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
-     html-doctype*    "<!DOCTYPE html>")
+(var xml-declaration "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+     html-doctype    "<!DOCTYPE html>")
 
 ; http://dev.w3.org/html5/markup/syntax.html#void-element
-(var html-void-elements* '(area base br col command embed hr img input
-                           keygen link meta param source track wbr))
+(var html-void-elements ["area" "base" "br" "col" "command" "embed" "hr" "img" "input"
+                         "keygen" "link" "meta" "param" "source" "track" "wbr"])
 
+(def normalize (x)
+  (let (l r) (until (x . rest) (cdr x)
+               (or (cons? x) (not (cons? rest))))
+    (list* (car x) (pair l) r)))
+#|
 
 (def noop (s type depth))
 
 (def pretty (s type depth)
-  (when (or (is type 'start) (isa (car s) 'cons))
-    (pr "\n" (newstring (* depth 2) #\space))))
+  (when (or (is type "start") (cons? (car s)))
+    (pr "\n" (str (n-of (* depth 2) #\space)))))
 
 
-(var mode   noop)
-(var parser nil)
+(var mode    noop)
+     parser  nil)
 
 
 (def attrs (xs)
-  (if (no xs)               nil
-      (isa (car xs) 'cons)  xs
-      (isa (cdr xs) 'cons)  (do (pr " " (car xs) "=\"" (cadr xs) "\"")
-                                (attrs (cddr xs)))
-                            xs))
-
+  (if (cons? (cdr xs))
+      (do (pr " " (car xs) "=\"" (cadr xs) "\"")
+          (attrs (cddr xs)))
+      xs))
 
 (def parse (s depth)
-  (if (no s)
-        nil
+  (if (not s)
+        s
       (atom s)
         (pr s)
       (let (l . r) s
@@ -91,3 +94,4 @@
 ;       (= noop ,pretty)
 ;       ,@body
 ;       (= noop ,x))))
+|#
