@@ -165,6 +165,7 @@
          ,@(map (n) args '(const n n)))
 |#
 
+; TODO better name than until
 (mac until (var x . body)
   (w/uniq (r y self)
     '(rwith self (r  nil
@@ -172,6 +173,15 @@
        (if (let var y . body)
            (list (rev r) y)
            (self (cons (car y) r) (cdr y))))))
+
+(def any-fn (f x)
+  (when (cons? x)
+    (if (f (car x))
+        t
+        (any-fn f (cdr x)))))
+
+(mac any (var x . body)
+  '(any-fn (fn (var) . body) x))
 
 (def ->input (x)
   (if (str? x)
