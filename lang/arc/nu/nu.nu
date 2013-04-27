@@ -174,6 +174,26 @@
            (list (rev r) y)
            (self (cons (car y) r) (cdr y))))))
 
+(def orf fns
+  (fn args
+    (aloop (x . rest) fns
+      (or (apply x args) (self rest)))))
+
+(mac w/complex (x . body)
+  (w/uniq (u v)
+    '(if (cons? x)
+         (w/uniq u
+           (with (v  x
+                  x  u)
+             '(let u v ,,@body)))
+         (do . body))))
+
+(mac in (x y . choices)
+  (if choices
+      (w/complex x
+        '(or (is x y) ,@(map y choices '(is x y))))
+      '(is x y)))
+
 (def any-fn (f x)
   (when (cons? x)
     (if (f (car x))

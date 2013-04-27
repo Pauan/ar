@@ -1,6 +1,3 @@
-; Modified from Arc 3.1:
-;   - better URI encoding
-
 ; Matching.  Spun off 29 Jul 06.
 
 ; arc> (tostring (writec (coerce 133 'char)))
@@ -56,7 +53,6 @@
            (a (cut s (+ p 1)))))
      (cons -1 (positions test s)))))
 
-
 ; > (require (lib "uri-codec.ss" "net"))
 ;> (form-urlencoded-decode "x%ce%bbx")
 ;"xλx"
@@ -65,53 +61,23 @@
 
 ; Fixed for utf8 by pc.
 
-(def uri-unreserved? (c)
-  (or (<= #\a c #\z)
-      (<= #\A c #\Z)
-      (<= #\0 c #\9)
-      (in c #\- #\_ #\. #\~)))
-
-(def uri-reserved? (c)
-  (no uri-unreserved?.c))
-
-(def uri-special? (c)
-  (in c #\# #\& #\+ #\/ #\: #\; #\= #\? #\@))
-
-(def uri-path? (c)
-  (is c #\/))
-
 (def urldecode (s)
-  (tostring:forlen i s
+ (tostring
+  (forlen i s
     (caselet c (s i)
       #\+ (writec #\space)
       #\% (do (when (> (- (len s) i) 2)
                 (writeb (int (cut s (+ i 1) (+ i 3)) 16)))
               (++ i 2))
-          (writec c))))
-
-(def percent-encode (c)
-                   ;; Fix for multi-byte Unicode characters
-                   ;; TODO: Nu specific
-  (tostring:each i (%.bytes->list (%.string->bytes/utf-8 string.c))
-    (writec #\%)
-    (if (< i 16) (writec #\0))
-    (pr:coerce i 'string 16)))
-
-(def percent-encode-if (f s)
-  (tostring:each c s
-    (if f.c
-        writec.c
-        (pr percent-encode.c))))
-
-(def urlencode-fragment (s)
-  (percent-encode-if uri-unreserved? s))
-
-(def urlencode-path (s)
-  (percent-encode-if (orf uri-unreserved? uri-path?) s))
+          (writec c)))))
 
 (def urlencode (s)
-  (percent-encode-if (orf uri-unreserved? uri-special?) s))
-
+  (tostring
+    (each c s
+      (writec #\%)
+      (let i (int c)
+        (if (< i 16) (writec #\0))
+        (pr (coerce i 'string 16))))))
 
 (mac litmatch (pat string (o start 0))
   (w/uniq (gstring gstart)
@@ -141,14 +107,6 @@
                            acc))
                   (rev acc)))))))
 
-(def headmatch (pat seq (o start 0))
-  (let p (len pat)
-    ((afn (i)
-       (or (is i p)
-           (and (is (pat i) (seq (+ i start)))
-                (self (+ i 1)))))
-     0)))
-
 (def posmatch (pat seq (o start 0))
   (catch
     (if (isa pat 'fn)
@@ -157,6 +115,14 @@
         (for i start (- (len seq) (len pat))
           (when (headmatch pat seq i) (throw i))))
     nil))
+
+(def headmatch (pat seq (o start 0))
+  (let p (len pat)
+    ((afn (i)
+       (or (is i p)
+           (and (is (pat i) (seq (+ i start)))
+                (self (+ i 1)))))
+     0)))
 
 (def begins (seq pat (o start 0))
   (unless (len> pat (- (len seq) start))
@@ -205,7 +171,7 @@
                  (+ i 1))))
         "")))
 
-(def commafy (n (o digits 2) (o trail-zeros nil) (o init-zero nil))
+(def num (n (o digits 2) (o trail-zeros nil) (o init-zero nil))
   (withs (comma
           (fn (i)
             (tostring

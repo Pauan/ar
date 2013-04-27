@@ -127,16 +127,22 @@
        (exact? x)
        (not (integer? x))))
 
+; TODO
+(define (byte/string? x)
+  (string? x)
+  ;(or (string? x) (bytes? x))
+)
+
 ;; generic comparison
 (define (make-comparer a b c)
   (lambda (x y)
           ;; TODO: better ordering for speed
-    (cond ((number? x)  (a x y))
-          ((string? x)  (b x y))
-          ((char? x)    (c x y))
-          ((symbol? x)  (b (symbol->string x)
-                           (symbol->string y)))
-          (else         (a x y)))))
+    (cond ((number? x)       (a x y))
+          ((byte/string? x)  (b x y)) ; TODO test this on byte strings
+          ((char? x)         (c x y))
+          ((symbol? x)       (b (symbol->string x)
+                                (symbol->string y)))
+          (else              (a x y)))))
 
 ;; based on Arc's reduce. Can't use foldl because it doesn't work well with
 ;; multiple types (e.g. +-2)
@@ -224,12 +230,12 @@
 ;; passed to the first arg, i.e. ('kids item) means (item 'kids).
 (define ref
   (case-lambda
-    ((x k)    (cond ((hash? x)    (hash-ref x k nil))
-                    ((string? x)  (string-ref x k))
-                    ((pair? x)    (list-ref x k))
-                    (else         (error "function call on inappropriate object" x k))))
-    ((x k d)  (if   (hash? x)     (hash-ref x k d)
-                                  (error "function call on inappropriate object" x k d)))
+    ((x k)    (cond ((hash? x)         (hash-ref x k nil))
+                    ((byte/string? x)  (string-ref x k)) ; TODO test this
+                    ((pair? x)         (list-ref x k))
+                    (else              (error "function call on inappropriate object" x k))))
+    ((x k d)  (if   (hash? x)          (hash-ref x k d)
+                                       (error "function call on inappropriate object" x k d)))
     (args     (apply error "function call on inappropriate object" args))))
 
 ;; Layer 3
@@ -356,7 +362,8 @@
                   (box-uniq x))))
         ((pair? x)
           (ac-call (car x) (cdr x)))
-        ((string? x)
+        ; TODO test this
+        ((byte/string? x)
           ((ac-string) x))
         ((bypass? x)
           (bypass-value x))
@@ -390,6 +397,7 @@
 ; TODO
 (define (is? x y)
   (or (eqv? x y)
+      ; TODO byte/string?
       (and (string? x) (string? y) (string=? x y))
       ;; TODO: why is this here in Arc 3.1?
       ;(and (false? x) (false? y))
@@ -408,77 +416,80 @@
   (if (symbol? x)
       (if (hygienic-macros?)
           (if (global? x)
-              (->box x)
-              (ac (->box x)))
-          `(quote ,x)) ; TODO (list (->orig-box 'quote) x) ?
-      (ac x)))
+              (bypass (->box x))
+              (->box x))
+          (bypass `(quote ,x))) ; TODO (list (->orig-box 'quote) x) ?
+      x))
 
-(define (ac-quasiquote-start x)
+(define (ac-quasiquote-start x rec)
   (if (pair? x)
       (let ((c (car x)))
               ; TODO orig-box?
-        (cond ((eq? c 'quote) ; TODO
-                (ac-quasiquote-quote x))
+        (cond ((eq? c rec)
+                (ac-quasiquote-start (ac-quasiquote-start (cadr x) rec) rec))
+              #|
+              ; TODO orig-box?
+              ((eq? c 'quote) ; TODO
+                (ac-quasiquote-quote x rec))|#
               ; TODO orig-box?
               ((eq? c 'unquote)
-                (ac (cadr x)))
+                (cadr x))
               ; TODO orig-box?
               ((eq? c 'unquote-splicing)
                 (error ",@ cannot be used immediately after `"))
-              ; TODO orig-box?
-              ((eq? c 'quasiquote)
-                (ac-quasiquote-start (ac-quasiquote-start (cadr x))))
               (else
-                (ac-quasiquote-pair x))))
+                (ac-quasiquote-pair x rec))))
       (ac-quasiquote-atom x)))
 
-(define (ac-quasiquote x)
-  (bypass (ac-quasiquote-start x)))
+(define (ac-quasiquote x [rec 'quasiquote])
+  (ac-quasiquote-start x rec))
 
+#|
 ; TODO: probably shouldn't special-case quote... figure out another way?
-(define (ac-quasiquote-quote c)
-  (list cons (ac-quasiquote-pair (car c))
+(define (ac-quasiquote-quote c rec)
+  (list cons (ac-quasiquote-pair (car c) rec)
              ;(parameterize ((hygienic-macros? #f)) ) TODO
-             (ac-quasiquote-pair (cdr c))))
+             (ac-quasiquote-pair (cdr c) rec)))|#
 
-(define (ac-quasiquote-pair x)
+(define (ac-quasiquote-pair x rec)
   (if (pair? x)
       (let ((c (car x)))
               ;; TODO handle 'quote here too ?
                     ; TODO orig-box?
         (cond ((and (eq? c 'unquote)
                     (null? (cddr x)))
-                (ac (cadr x)))
+                (cadr x))
                     ; TODO orig-box?
               ((and (eq? c 'unquote-splicing)
                     (null? (cddr x)))
                 (error "cannot use ,@ after ."))
               ((pair? c)
                       ; TODO orig-box?
-                (cond ((eq? (car c) 'quote)
-                        (list cons (ac-quasiquote-quote c)
-                                   (ac-quasiquote-pair (cdr x))))
+                (cond ((eq? (car c) rec)
+                        (list cons (ac-quasiquote-pair (ac-quasiquote-start (cadr c) rec) rec)
+                                   (ac-quasiquote-pair (cdr x) rec)))
+                      #|
+                      ; TODO orig-box?
+                      ((eq? (car c) 'quote)
+                        (list cons (ac-quasiquote-quote c rec)
+                                   (ac-quasiquote-pair (cdr x) rec)))|#
                       ; TODO orig-box?
                       ((eq? (car c) 'unquote)
-                        (list cons (ac (cadr c))
-                                   (ac-quasiquote-pair (cdr x))))
+                        (list cons (cadr c)
+                                   (ac-quasiquote-pair (cdr x) rec)))
                       ; TODO orig-box?
                       ((eq? (car c) 'unquote-splicing)
                         (if (null? (cdr x))
-                            (ac (cadr c))
-                            (list append (ac (cadr c))
-                                         (ac-quasiquote-pair (cdr x)))))
-                      ; TODO orig-box?
-                      ((eq? (car c) 'quasiquote)
-                        (list cons (ac-quasiquote-pair (ac-quasiquote-start (cadr c)))
-                                   (ac-quasiquote-pair (cdr x))))
-                     (else
-                       ;; TODO: code duplication
-                       (list cons (ac-quasiquote-pair c)
-                                  (ac-quasiquote-pair (cdr x))))))
+                            (cadr c)
+                            (list append (cadr c)
+                                         (ac-quasiquote-pair (cdr x) rec))))
+                      (else
+                        ;; TODO: code duplication
+                        (list cons (ac-quasiquote-pair c rec)
+                                   (ac-quasiquote-pair (cdr x) rec)))))
               (else
-                (list cons (ac-quasiquote-pair c)
-                           (ac-quasiquote-pair (cdr x))))))
+                (list cons (ac-quasiquote-pair c rec)
+                           (ac-quasiquote-pair (cdr x) rec)))))
       (ac-quasiquote-atom x)))
 
 ;=============================================================================
@@ -487,6 +498,7 @@
 (define (->sym x)
   (cond ((symbol? x)
           x)
+        ; TODO byte/string?
         ((string? x)
           (string->symbol x))
         (else
@@ -508,8 +520,8 @@
           (number->string x))
         ((path? x)
           (path->string x))
-        ((bytes? x)
-          (bytes->string/utf-8 x))
+        #|((bytes? x)
+          (bytes->string/utf-8 x))|#
         (else
           (error (format "can't convert ~s to a string" x)))))
 

@@ -1,6 +1,6 @@
 (import nuit/parse
         parse-script-args
-        strings ; Only needed for urlencode-path
+        url-encode
         sxml)
 
 (var version      "3.0"
@@ -118,17 +118,16 @@
                   files.name))))
 
 (def encode-path (s)
-                    ; TODO relies on Nu specific changes to lib/strings.arc
-  (string "file://" (urlencode-path:string cwd s)))
+  (str "file://" (url-encode-path (str cwd s))))
 
 (def ->sxml (title files)
-  (w/pretty:->xml
-    `(playlist version  "1"
-               xmlns    "http://xspf.org/ns/0/"
-               xml:base ,cwd
-       (title ,title)
-       (trackList ,@(maplet x files
-                      `(track (location ,encode-path.x)))))))
+  (->xml
+    '("playlist" "version"  "1"
+                 "xmlns"    "http://xspf.org/ns/0/"
+                 "xml:base" ,cwd
+       ("title" ,title)
+       ("trackList" ,@(map x files
+                        '("track" ("location" ,(encode-path x))))))))
 
 ;=============================================================================
 ;  Input and processing

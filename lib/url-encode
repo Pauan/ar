@@ -1,0 +1,48 @@
+(def uri-unreserved? (c)
+  (or (<= #\a c #\z)
+      (<= #\A c #\Z)
+      (<= #\0 c #\9)
+      (in c #\- #\_ #\. #\~)))
+
+(def uri-reserved? (c)
+  (not (uri-unreserved? c)))
+
+(def uri-path? (c)
+  (is c #\/))
+
+(def uri-special? (c)
+  (or (uri-path? c)
+      (in c #\# #\& #\+ #\: #\; #\= #\? #\@)))
+
+#|(def url-decode (s)
+  (tostring:forlen i s
+    (caselet c (s i)
+      #\+ (writec #\space)
+      #\% (do (when (> (- (len s) i) 2)
+                (writeb (int (cut s (+ i 1) (+ i 3)) 16)))
+              (++ i 2))
+          (writec c))))|#
+
+(def percent-encode (c)
+         ;; Needed for multi-byte Unicode characters
+         ; TODO better handling for byte strings?
+  (map i ((% bytes->list) ((% string->bytes/utf-8) (str c)))
+    (str #\%
+         (when (< i 16) #\0)
+          ; TODO should probably be a primitive in Arc/Nu
+         ((% number->string) i 16))))
+
+(def percent-encode-if (f s)
+  (map c s
+    (if (f c)
+        c
+        (percent-encode c))))
+
+(def url-encode-fragment (s)
+  (percent-encode-if uri-unreserved? s))
+
+(def url-encode-path (s)
+  (percent-encode-if (orf uri-unreserved? uri-path?) s))
+
+(def url-encode (s)
+  (percent-encode-if (orf uri-unreserved? uri-special?) s))

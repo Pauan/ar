@@ -69,7 +69,7 @@
   (ac-fn parms body))
 
 (mac quote (x)
-  (ac-quasiquote x))
+  (ac-quasiquote x 'quote))
 
 (mac do args
   (bypass
@@ -91,7 +91,7 @@
 ;(assign close1 #:sig (x) close1)
 
 (def str? (x)
-  (tnil (string? x)))
+  (tnil (byte/string? x)))
 
 (def cons? (x)
   (tnil (pair? x)))
@@ -111,10 +111,10 @@
 
 (const peek peek-char)
 (const read read-char)
-(const < <)
-(const > >)
-(const >= >=)
-(const <= <=)
+(const <  (make-pairwise (make-comparer < string<? char<?)))
+(const >  (make-pairwise (make-comparer > string>? char>?)))
+(const <= (make-pairwise (make-comparer <= string<=? char<=?)))
+(const >= (make-pairwise (make-comparer >= string>=? char>=?)))
 (const - -)
 (const rev reverse)
 (const eof? eof-object?)
@@ -183,7 +183,8 @@
                                         (set! y (hash-set y key val)))
                                       (f (list key val)))))
             y))
-        ((string? x)
+        ; TODO test this
+        ((byte/string? x)
           (->all-string (map f (string->list x))))
         (else
           (error (format "~s cannot be iterated" x)))))
@@ -193,7 +194,8 @@
           (for-each f x))
         ((hash? x)
           (hash-for-each x (lambda (key val) (f (list key val)))))
-        ((string? x)
+        ; TODO test this
+        ((byte/string? x)
           (for ((c (in-string x)))
             (f c)))
         (else
@@ -210,7 +212,8 @@
   (let-values (((line col pos) (port-next-location x))) (list line col pos)))
 
 (def last (x)
-  (cond ((string? x)
+        ; TODO test this
+  (cond ((byte/string? x)
           (let ((i (string-length x)))
             (if (= i 0)
                 nil
@@ -224,7 +227,8 @@
   (let ((end (if (< end 0)
                  (+ (string-length x) end)
                  end)))
-    (cond ((string? x)
+          ; TODO test this
+    (cond ((byte/string? x)
             (substring x start end))
 
           )))
@@ -242,22 +246,24 @@
           x))))
 
 (def err args
-  (error (apply string-append (map ->string args))))
+  (error (->all-string args)))
 
 (const reduce-fn reduce)
 
 (def ->cons (x)
-  (cond ((list? x)    x)
-        ((string? x)  (string->list x))
-        (else         (error (format "can't convert ~s to a cons" x)))))
+  (cond ((list? x)         x)
+        ; TODO test this
+        ((byte/string? x)  (string->list x))
+        (else              (error (format "can't convert ~s to a cons" x)))))
 
 (const macex1 macex1)
 
 ; TODO code duplication with arc/3.1/main
 (def len (x)
-  (cond ((string? x)  (string-length x))
-        ((hash? x)    (hash-count x))
-        (else         (length x))))
+        ; TODO test this
+  (cond ((byte/string? x)  (string-length x))
+        ((hash? x)         (hash-count x))
+        (else              (length x))))
 
 ; Conses
 (const nil nil)
