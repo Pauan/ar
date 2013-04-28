@@ -4,9 +4,6 @@
       (<= #\0 c #\9)
       (in c #\- #\_ #\. #\~)))
 
-(def uri-reserved? (c)
-  (not (uri-unreserved? c)))
-
 (def uri-path? (c)
   (is c #\/))
 
@@ -14,7 +11,9 @@
   (or (uri-path? c)
       (in c #\# #\& #\+ #\: #\; #\= #\? #\@)))
 
-#|(def url-decode (s)
+#|
+(def url-decode (s)
+  (w/ stdout )
   (tostring:forlen i s
     (caselet c (s i)
       #\+ (writec #\space)

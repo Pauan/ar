@@ -5,14 +5,6 @@
 
 (var version      "3.0"
      options      (dict)
-
-     playlists    nil
-     folders      nil
-
-     strings      nil
-     errors       nil
-     files        (dict)
-
      filetypes    (list "flac" "flv" "mid" "mkv"  "mp3" "mp4"
                         "ogg"  "ogm" "wav" "webm" "wma")
 
@@ -29,94 +21,136 @@
                     ;((out) "Folder where the .xspf files are written to")
 
 (def dirall-ext (exts)
-  (sort < (dirall nil (fn (x)
-            (and (no:hidden-file? x)
-                     ; TODO use dirname ?
-                 (or (dir-exists x)
-                     (some (sym:downcase:extension x) exts)))))))
+  (dirall nil (fn (x)
+    (and (not (hidden-file? x))
+             ; TODO use dirname ?
+         (or (dir? x)
+             (any y exts
+               (is (downcase (extension x)) y)))))))
+
+(var playlists  nil
+     folders    nil)
 
 (def process-string (x)
   (->re (re-escape x)))
 
 (def process-folder (x)
-  (->re:string "(?:^|/)"
-               (re-escape x)
-                           ; TODO use last
-               (unless (is (x:- len.x 1) #\/) "/")))
+  (->re (str "(?:^|/)"
+             (re-escape x)
+             (unless (is (last x) #\/) "/"))))
 
-(def insert-file (x)
-  (push (list x process-string.x folders rev.playlists)
-        strings))
+(def process-file (x)
+  (list x (process-string x) folders (rev playlists)))
+
+(def include x
+  x
+;  (flatten (map-fn process-file x))
+  )
 
 (def normalize-file (k v)
   (w/ playlists (cons k playlists)
     (aloop (x . rest) v
-      (if acons.x
-          (case car.x
-            "title"    (= playlists (cons cadr.x cdr.playlists))
-            "include"  (push (list* 'include (list car.playlists) cdr.x)
-                             strings)
-            "playlist" (w/ playlists (cons cadr.x playlists)
-                         (self cddr.x))
-            "folder"   (w/ folders (cons (process-folder cadr.x) folders)
-                         (self cddr.x))
-            "file"     (if (assoc "ignore" cddr.x)
-                           (prn "ignoring file " cadr.x)
-                           (insert-file cadr.x)))
-          (insert-file x))
-      (self rest))))
+      (if (cons? x)
+          (case (car x)
+            "title"    (do (= playlists (cons (cadr x) (cdr playlists)))
+                           (self rest))
+                                            ; TODO why is this here?
+            "include"  (cons (list* include (list (car playlists)) (cdr x))
+                             (self rest))
+            "playlist" (join (w/ playlists (cons (cadr x) playlists)
+                               (self (cddr x)))
+                             (self rest))
+            "folder"   (join (w/ folders (cons (process-folder (cadr x)) folders)
+                               (self (cddr x)))
+                             (self rest))
+            #|"file"     (if (assoc "ignore" (cddr x))
+                           (prn "ignoring file " (cadr x))
+                           (insert-file (cadr x)))|#
+                       (err "invalid " (car x)))
+          (cons (process-file x)
+                (self rest))))))
 
 ; http://en.wikipedia.org/wiki/Injective_function
 (def process-injective (strings files)
-  (debug "processing " len.strings " strings and " len.files " files")
-  (let seen (obj)
-    (maplet x strings
-      (if (isa car.x 'sym)
-          x
+  (debug "processing " (len strings) " strings and " (len files) " files")
+  (with (seen    (dict)
+         pats    (dict)
+         unseen  nil)
+    (each file files
+      (each x strings
+        (unless (fn? (car x))
           (let (pat proc folders playlists) x
-            (withs (f  (trues (fn (file)
-                                (and (re? proc file)
-                                     (all [or (re? _ file) nil] folders)
-                                     file))
-                              files)
-                    c  car.f)
-              (aif no.f
-                     (push (list "no-file" (list pat playlists))
-                           errors)
-                   cdr.f
-                     (push (list "multi-file" (list pat playlists) f)
-                           errors)
-                   seen.c
-                     (push (list "multi-string" (list pat playlists) list.c it)
-                           errors))
-              (each c f
-                (= seen.c (list pat playlists)))
-              (list c playlists)))))))
+            (when (and (re? proc file)
+                       (all x folders
+                         (re? x file)))
+              (push file (pats x))
+              (push x (seen file))))))
+      (unless (seen file)
+        (push file unseen)))
+    (each x strings
+      (unless (pats x)
+        (= (pats x) nil)))
+    (list seen pats unseen)))
 
-(def print-strings args
-  (prn "  @strings")
-  (each x (map car args)
-    (prn "    " x)))
-
-(def print-files (x)
-  (prn "  @files")
-  (each x x
-    (prn "    " x)))
-
-(def print-playlists args
-  (prn "  @playlists")
-  (each x (dedup:apply join (map cadr args))
-    (prn "    " x)))
+#|
 
 (let processed (obj)
   (def process-file (name)
     (or= processed.name
          (mappend (fn (x)
-                    (if (caris x 'include)
-                        (mappend process-file cdr.x)
+                    (if (fn? (car x))
+                        (apply x (cdr x))
                         x))
-                  files.name))))
+                  files.name))))|#
 
+;=============================================================================
+;  Errors
+;=============================================================================
+(var error? nil)
+
+(def print-strings (x)
+  (prn "  @strings")
+  (each (x) x
+    (prn "   " x)))
+
+(def print-files (x)
+  (prn "  @files")
+  (each x x
+    (prn "   " x)))
+
+(def print-playlists (x)
+  (prn "  @playlists")
+  (each x (dedup (flatmap (_ _ _ x) x x))
+    (prn "   " x)))
+
+(def error ()
+  (= error? t)
+  (prn)
+  (pr "@error "))
+
+(def error-no-file (x)
+  (error)
+  (prn "string did not match any file")
+  (print-strings x)
+  (print-playlists x))
+
+(def error-multi-file (x file)
+  (error)
+  (prn "string matched multiple files")
+  (print-strings x)
+  (print-files file)
+  (print-playlists x))
+
+(def error-multi-string (x file)
+  (error)
+  (prn "file was matched by multiple strings")
+  (print-files file)
+  (print-strings x)
+  (print-playlists x))
+
+;=============================================================================
+;  Input, processing, and output
+;=============================================================================
 (def encode-path (s)
   (str "file://" (url-encode-path (str cwd s))))
 
@@ -129,73 +163,52 @@
        ("trackList" ,@(map x files
                         '("track" ("location" ,(encode-path x))))))))
 
-;=============================================================================
-;  Input and processing
-;=============================================================================
-(let input car.script-args
-  (zap todir input)
-  (w/ cwd input
-    (each name (dir ".")
-      (if (dir-exists name)
-            (debug "ignoring folder \"" input name "\"")
+(def input (folder)
+  (zap ->dir folder)
+  (w/ cwd folder
+    (flatmap name (dir)
+      (if (dir? name)
+            (debug "ignoring folder \"" folder name "\"")
           (hidden-file? name)
-            (debug "ignoring hidden file \"" input name "\"")
-          (let value (w/infile s name nuit-parse.s)
+            (debug "ignoring hidden file \"" folder name "\"")
+          (let value (w/infile s name (parse s))
             (normalize-file name value))))))
 
+(def output (dict unseen folder)
+  (zap ->dir folder)
+  (= (dict "All")    (dirall-ext filetypes))
+  (= (dict "Unseen") unseen)
+  (each (k v) dict
+    (if v
+        (let v (->sxml k (sort v))
+          (debug "writing to \"" folder k ".xspf\"")
+          (w/ cwd folder
+            (w/outfile out (str k ".xspf")
+              (w/ stdout out
+                (pr v)))))
+        (debug "ignoring playlist \"" k "\" because it is empty"))))
+
 (let time (msec)
-  (zap process-injective strings dirall-ext.filetypes)
-  (debug "took " (- (msec) time) " msec to process all strings"))
+  (let (files pats unseen) (process-injective (input (car script-args))
+                                              (dirall-ext filetypes))
+    (debug "took " (- (msec) time) " msec to process all strings")
+    (let seen (dict)
+      (each (k v) files
+        (if (is (len v) 1)
+            (let (_ _ _ x) (car v)
+              (each x x
+                (push k (seen x))))
+            (error-multi-string v (list k))))
 
-;=============================================================================
-;  Errors
-;=============================================================================
-(each (n x file other) errors
-  (prn)
-  (pr "@error ")
-  (case n
-    "no-file"
-      (do (prn "string did not match any file")
-          (print-strings x)
-          (print-playlists x))
-    "multi-file"
-      (do (prn "string matched multiple files")
-          (print-strings x)
-          (print-files file)
-          (print-playlists x))
-    "multi-string"
-      (do (prn "file was matched by multiple strings")
-          (print-files file)
-          (print-strings x other)
-          (print-playlists x other))
-    (err "invalid error message" n x file other)))
+      (each (k v) pats
+        (case (len v)
+          0 (error-no-file (list k))
+          1 nil
+            (error-multi-file (list k) v)))
 
-(when errors
-  (prn)
-  (prn "aborting due to errors")
-  (quit 1))
+      (when error?
+        (prn)
+        (prn "aborting due to errors")
+        (quit 1))
 
-;=============================================================================
-;  Output
-;=============================================================================
-(each (file playlists . rest) strings
-  (each x playlists
-    (push (cons file rest) files.x)))
-
-; TODO: ->sxml has to be run before w/ cwd
-(let output cadr.script-args
-  (zap todir output)
-  (withs (all  dirall-ext.filetypes
-          all  (->sxml "All" all))
-    (w/ cwd output
-      (w/outfile out "All.xspf"
-        (disp all out))))
-  (each (k v) files
-    (iflet v process-file.k
-      (let v (->sxml k v)
-        (debug "writing to \"" output k ".xspf\"")
-        (w/ cwd output
-          (w/outfile out (+ k ".xspf")
-            (disp v out))))
-      (debug "ignoring playlist \"" k "\" because it is empty")))
-)
+      (output seen unseen (cadr script-args)))))

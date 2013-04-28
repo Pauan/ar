@@ -26,14 +26,16 @@
                   (err "void element may not have content: " x)
                   (str "<" x (attrs y) "/>"))
             (cons? body)
-              (str "<" x (attrs y) ">"
-                (map x body
-                  (if (str? x)
-                      x
-                      (str new (n-of (+ i 1) space)
-                               (self x (+ i 1)) new
-                               (n-of i space))))
-                "</" x ">")
+              (let cont? nil
+                (str "<" x (attrs y) ">"
+                       (map x body
+                         (if (str? x)
+                             x
+                             (do (= cont? t)
+                                 (str new (n-of (+ i 1) space)
+                                          (self x (+ i 1))))))
+                     (when cont? (str new (n-of i space)))
+                     "</" x ">"))
             (if void
                 (str "<" x (attrs y) "></" x ">")
                 (str "<" x (attrs y) "/>")))))))

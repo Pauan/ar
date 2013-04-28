@@ -1,3 +1,5 @@
+(% (require racket/list))
+
 (const mac (make-macro
              (fn (name args . body)
                '(const-rec name (make-macro (fn args . body))))))
@@ -14,8 +16,8 @@
 (mac each (var x . body)
   '(each-fn (fn (var) . body) x))
 
-(mac mappair (var x . body)
-  '(flatten (map var (pair x) . body)))
+(mac flatmap (var x . body)
+  '(flatten (map var x . body)))
 
 (mac with-raw (names . body)
   '((fn ,(map-fn car names) . body)
@@ -188,17 +190,41 @@
              '(let u v ,,@body)))
          (do . body))))
 
+(mac zap (f x . rest)
+  '(= x (f x . rest)))
+
 (mac in (x y . choices)
   (if choices
       (w/complex x
         '(or (is x y) ,@(map y choices '(is x y))))
       '(is x y)))
 
+(mac w/infile (var x . body)
+  '(w/infile-fn x (fn (var) . body)))
+
+(mac w/outfile (var x . body)
+  '(w/outfile-fn x (fn (var) . body)))
+
+(def all-fn (f x)
+  (if (cons? x)
+      (if (f (car x))
+          (all-fn f (cdr x))
+          nil)
+      t))
+
+(mac all (var x . body)
+  '(all-fn (fn (var) . body) x))
+
 (def any-fn (f x)
   (when (cons? x)
-    (if (f (car x))
-        t
+    (or (f (car x))
         (any-fn f (cdr x)))))
+
+; TODO move these two into main
+(def dedup (x)
+  ((% remove-duplicates) x
+    (fn (x y)
+      ((% true?) (is x y)))))
 
 (mac any (var x . body)
   '(any-fn (fn (var) . body) x))
@@ -207,6 +233,8 @@
   (if (str? x)
       ((% open-input-string) x)
       x))
+
+(def idfn (x) x)
 
 (def dotted? (x)
   (when x
@@ -226,9 +254,11 @@
       '(list . args)))
 
 (mac curly-brackets (args)
-  '(dict ,@(mappair (x y) args (list (str x) y))))
+  '(dict ,@(flatmap (x y) (pair args) (list (str x) y))))
 
-(parameter-var stdin (% current-input-port))
+(parameter-var stdin  (% current-input-port))
+(parameter-var stdout (% current-output-port))
+(parameter-var stderr (% current-error-port))
 
 #|(prn ((% ac) '(case 1
        1 2

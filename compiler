@@ -520,8 +520,9 @@
           (number->string x))
         ((path? x)
           (path->string x))
-        #|((bytes? x)
-          (bytes->string/utf-8 x))|#
+        ; TODO
+        ((bytes? x)
+          (bytes->string/utf-8 x))
         (else
           (error (format "can't convert ~s to a string" x)))))
 
@@ -1100,7 +1101,7 @@
                  (exec-dir          dir)
                  (import-dirs       (list ;(path->string (current-directory)) ; TODO
                                           (path->string (build-path dir "lib"))
-                                          ;(path->string dir)
+                                          (path->string dir)
                                           ))
                  (import-cache      (make-hash))
                  (lang-cache        (make-hash))

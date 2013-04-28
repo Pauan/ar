@@ -109,15 +109,51 @@
 ; TODO
 (const details exn-message)
 
+; TODO move into compiler
+(define ac-< (make-pairwise (make-comparer < string<? char<?)))
+
+; TODO get keyword args working in compiler
+(def sort (x [f   ac-<]
+             [key (lambda (x) x)])
+  (sort x (lambda (x y)
+            (true? (f x y)))
+          #:key key))
+
 (const peek peek-char)
 (const read read-char)
-(const <  (make-pairwise (make-comparer < string<? char<?)))
+(const <  ac-<)
 (const >  (make-pairwise (make-comparer > string>? char>?)))
 (const <= (make-pairwise (make-comparer <= string<=? char<=?)))
 (const >= (make-pairwise (make-comparer >= string>=? char>=?)))
 (const - -)
 (const rev reverse)
 (const eof? eof-object?)
+(const quit exit)
+(const fn? procedure?)
+(const msec current-milliseconds)
+(const join append)
+
+(def w/infile-fn (x f)
+  ; TODO should this use this or call-with-input-file ?
+  (call-with-input-file* x f))
+
+(def w/outfile-fn (x f)
+  ; TODO should this use this or call-with-output-file ?
+  (call-with-output-file* x f #:exists 'replace))
+
+(def dir ([name "."])
+  (map path->string (directory-list name)))
+
+(def downcase (x)
+  (string-downcase (->string x)))
+
+(def dir? (x)
+  (tnil (directory-exists? x)))
+
+(def debug args
+  (when (debug?)
+    (displayln (->all-string args)))
+  nil)
 
 (def str args
   (->all-string args))
@@ -235,7 +271,7 @@
 
 (const t t)
 
-(def join (s x)
+(def join-str (s x)
   (->all-string
     (let self ((x x))
       (if (and (cons? x)

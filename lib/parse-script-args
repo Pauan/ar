@@ -33,7 +33,7 @@
 (mac register-script-arg args
   (let opts nil
     (aloop (x . rest) args
-      (if (string? x)
+      (if (str? x)
           (do (push x opts)
               (self rest))
           (with (args  x
