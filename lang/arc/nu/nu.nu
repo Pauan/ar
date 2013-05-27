@@ -43,6 +43,7 @@
       x
       (list x)))
 
+; TODO remove this ?
 (mac quasiquote (x)
   ((% bypass) (list (sym "quasiquote") x)))
 
@@ -220,7 +221,7 @@
     (or (f (car x))
         (any-fn f (cdr x)))))
 
-; TODO move these two into main
+; TODO move this into main
 (def dedup (x)
   ((% remove-duplicates) x
     (fn (x y)

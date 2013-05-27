@@ -64,7 +64,7 @@
                          (codestring s))))
           (unescape-ats s))
       ; avoid immutable strings
-      (string-copy s))))
+      (list string-copy s))))
 
 ;=============================================================================
 ;  I/O
