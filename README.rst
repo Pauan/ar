@@ -20,21 +20,7 @@ This also means that the ``arc`` executable is suitable for writing shell script
 
 Use ``./arc -h`` to see all the available options.
 
-
-What is it?
-===========
-
-Arc/Nu is Arc 3.1 but *bettar*. It includes bug fixes, new features, additional libraries, and applications that I've found useful. Despite that, it's still completely backwards compatible with Arc 3.1
-
-* ``01 nu`` is the Arc/Nu compiler
-* ``02 arc`` is copied unmodified from Arc 3.1
-* ``03 utils`` contains generic utilities
-* ``04 paths`` contains functions for inspecting and manipulating file paths
-* ``05 repl`` implements a REPL
-* ``arc`` is an executable that will load the above files in order
-
-* ``lib/`` contains other useful libraries
-* ``app/`` contains applications I've written using Arc/Nu
+----
 
 So, why would you want to use it over Arc 3.1 or Anarki?
 
@@ -42,7 +28,7 @@ So, why would you want to use it over Arc 3.1 or Anarki?
   cases is significantly faster. For instance, ``(+ 1 2)`` was 75.21% faster
   in Arc/Nu than in Arc 3.1, last time I checked.
 
-* Arc/Nu uses boxes internally. This means you get an awesome namespace system (using the ``w/include``, ``w/exclude``, ``w/rename``, and ``w/prefix`` macros). You can also turn on hyper-static scope and hygienic macros.
+* In addition to supporting Arc 3.1, the Arc/Nu compiler can also support other languages. All languages supported by Arc/Nu can communicate with each other and use libraries defined in other languages.
 
 * Includes an ``import`` macro which makes it significantly easier to load files::
 
