@@ -62,7 +62,7 @@
                                (unescape-ats x)
                                x))
                          (codestring s))))
-          (unescape-ats s))
+          (list string-copy (unescape-ats s)))
       ; avoid immutable strings
       (list string-copy s))))
 
