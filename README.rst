@@ -3,7 +3,7 @@ How to install
 
 ::
 
-  git clone --recursive https://github.com/Pauan/ar.git arc-nu
+  git clone --recursive https://github.com/Pauan/arc-nu.git arc-nu
 
 
 How to run
