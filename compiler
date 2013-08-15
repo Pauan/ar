@@ -542,6 +542,7 @@
 
 (define (find-filename p dir file)
   (let self ((x (import-dirs)))
+    ;(path-only p)
     (if (pair? x)
         (let ((p (path->string (abspath p (car x)))))
           (exists? p dir file
@@ -563,8 +564,7 @@
 
 (define (load-file p)
   (parameterize ((filename p)
-                 (import-dirs (cons (path-only p) ; TODO: is this good?
-                                    (import-dirs)))
+                 (import-dirs (import-dirs)) ; TODO
                  (exported-globals (make-hasheq)))
     (let ((old (globals)))
       (call-with-input-file p
