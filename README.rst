@@ -5,7 +5,9 @@ How to install
 
   git clone --recursive https://github.com/arclanguage/arc-nu.git arc-nu
 
-You'll also need `Racket <http://racket-lang.org/>`_. If you're on *nix you can probably get it with your distribution's package manager, like ``apt-get`` or ``yum`` or whatever. If you're on Windows or Mac OS X, get Racket `here <http://racket-lang.org/download/>`_.
+You'll also need `Racket <http://racket-lang.org/>`_. If you're on \*nix you can probably get it with your distribution's package manager, like ``apt-get`` or ``yum`` or whatever.
+
+If you're on Windows or Mac OS X, get Racket `here <http://racket-lang.org/download/>`_.
 
 
 How to run
@@ -15,16 +17,27 @@ If you're on Windows, double click on the ``arc.bat`` file.
 
 ----
 
-If you're on *nix or OS X, use ``./arc`` while in the Arc/Nu directory.
+If you're on \*nix or Mac OS X, use ``path/to/arc-nu/arc``.
 
-You can also use ``./arc foo`` to load the Arc file ``foo.arc``.
+If you don't want to type out the path to ``arc`` every time, you can place a symlink in your ``$PATH``.
 
-This also means that the ``arc`` executable is suitable for writing shell scripts::
+Doing so is a bit involved, and depends on what distribution you're using. On Debian/Ubuntu-based systems, this should work::
+
+  mkdir -p ~/bin
+  ln -s path/to/arc-nu/arc ~/bin/arc
+
+Now logout or reboot your computer. If it went well, you should be able to use ``arc`` rather than ``path/to/arc-nu/arc``.
+
+----
+
+You can use ``arc foo`` to load the Arc file ``foo.arc``.
+
+And the ``arc`` executable is suitable for writing shell scripts::
 
     #! /usr/bin/env arc
     (prn "foo")
 
-Use ``./arc -h`` to see all the available options.
+Use ``arc -h`` to see all the available options.
 
 
 Why?
