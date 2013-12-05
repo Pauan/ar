@@ -32,7 +32,7 @@ Now logout or reboot your computer. If it went well, you should be able to use `
 
 ----
 
-You can use ``arc foo`` to load the Arc file ``foo.arc``.
+You can use ``arc foo`` to load the Arc file ``foo.arc``
 
 And the ``arc`` executable is suitable for writing shell scripts::
 
