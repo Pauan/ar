@@ -5,11 +5,17 @@ How to install
 
   git clone --recursive https://github.com/arclanguage/arc-nu.git arc-nu
 
+You'll also need `Racket <http://racket-lang.org/>`_. If you're on *nix you can probably get it with your distribution's package manager, like ``apt-get`` or ``yum`` or whatever. If you're on Windows or Mac OS X, get Racket `here <http://racket-lang.org/download/>`_.
+
 
 How to run
 ==========
 
-Just call ``./arc`` and you'll get a REPL.
+If you're on Windows, double click on the ``arc.bat`` file.
+
+----
+
+If you're on *nix or OS X, use ``./arc`` while in the Arc/Nu directory.
 
 You can also use ``./arc foo`` to load the Arc file ``foo.arc``.
 
@@ -20,7 +26,9 @@ This also means that the ``arc`` executable is suitable for writing shell script
 
 Use ``./arc -h`` to see all the available options.
 
-----
+
+Why?
+====
 
 So, why would you want to use it over Arc 3.1 or Anarki?
 

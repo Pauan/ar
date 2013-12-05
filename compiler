@@ -1109,6 +1109,7 @@
                  (locals            (hasheq))
                  (procedure-var     (hasheq))
                  (uniq-counter      1))
+    (displayln (globals))
     ;(init)
     (parameterize ((orig-globals (globals)))
       (ac-lang lang (lambda ()
