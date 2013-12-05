@@ -5,7 +5,7 @@ How to install
 
   git clone --recursive https://github.com/arclanguage/arc-nu.git arc-nu
 
-You'll also need `Racket <http://racket-lang.org/>`_.
+You also need `Racket <http://racket-lang.org/>`_.
 
 If you're on \*nix you can probably get it with your distribution's package manager, like ``apt-get`` or ``yum`` or whatever.
 
@@ -17,9 +17,9 @@ How to run
 
 If you're on Windows, double click on the ``arc.bat`` file.
 
-----
-
 If you're on \*nix or Mac OS X, use ``path/to/arc-nu/arc``
+
+----
 
 If you don't want to type out the path to ``arc`` every time, you can place a symlink in your ``$PATH``
 
