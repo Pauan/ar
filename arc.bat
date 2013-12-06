@@ -26,11 +26,10 @@ echo "%ProgramFiles%\Racket\Racket.exe"
 echo "%ProgramFiles(x86)%\Racket\Racket.exe"
 
 rem  This is so it will work on both 64-bit and 32-bit systems
-IF EXISTS "%ProgramFiles%\Racket\Racket.exe" (
-  "%ProgramFiles%\Racket\Racket.exe" "%~dp0arc"
-) ELSE (
-  "%ProgramFiles(x86)%\Racket\Racket.exe" "%~dp0arc"
-)
+IF NOT EXISTS "%ProgramFiles%\Racket\Racket.exe" GOTO win64
+"%ProgramFiles%\Racket\Racket.exe" "%~dp0arc"
+:win64
+"%ProgramFiles(x86)%\Racket\Racket.exe" "%~dp0arc"
 
 rem  The "pause" command displays a "press any key" message. If Racket
 rem  exits with an error, this command keeps the batch script running

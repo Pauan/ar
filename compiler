@@ -1102,6 +1102,7 @@
                  (exec-dir          dir)
                  (import-dirs       (list ;(path->string (current-directory)) ; TODO
                                           (path->string (build-path dir "lib"))
+                                          (path->string (build-path dir "lib/arc3.1"))
                                           (path->string dir)
                                           ))
                  (import-cache      (make-hash))

@@ -604,6 +604,7 @@
 ;; thanks, Eli!
 ;;
 ;; Currently only used by srv.arc
+;; TODO does this break on Windows ?
 (assign setuid #:sig (i) (get-ffi-obj 'setuid #f (_fun _int -> _int)))
 
 ;: TODO: need to use a better seed (Arc 3.1???)
