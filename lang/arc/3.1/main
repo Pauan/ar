@@ -602,6 +602,8 @@
 ; OS
 ;; allow Arc to give up root privileges after it calls open-socket.
 ;; thanks, Eli!
+;;
+;; Currently only used by srv.arc
 (assign setuid #:sig (i) (get-ffi-obj 'setuid #f (_fun _int -> _int)))
 
 ;: TODO: need to use a better seed (Arc 3.1???)
