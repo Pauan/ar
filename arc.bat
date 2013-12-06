@@ -23,7 +23,7 @@ pushd .
 
 ::  http://stackoverflow.com/questions/3827567/how-to-get-the-path-of-the-batch-script-in-windows
 ::  Actually executes Arc
-echo dir /b /s Racket.exe
+for %i in (Racket.exe) do @echo. %~$PATH:i
 echo "%~dp0arc"
 racket "%~dp0arc"
 
