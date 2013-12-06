@@ -606,6 +606,9 @@
           (lambda ()
             (parameterize ((current-load-relative-directory (path-only path))
                            (filename (path->string path)))
+              (display 2)
+              (display " ")
+              (displayln (globals))
               (namespace-require path)
               (let ((y (current-parameterization)))
                 (hash-set! x path y)
@@ -908,6 +911,8 @@
     #f))
 
 (define (set-name n v)
+  (display 3)
+  (display " ")
   (displayln (globals))
   (set-raw n (nameit n v)))
 
@@ -1114,6 +1119,9 @@
                  (uniq-counter      1))
     ;(init)
     (parameterize ((orig-globals (globals)))
+      (display 1)
+      (display " ")
+      (displayln (globals))
       (ac-lang lang (lambda ()
         ;; These files have Arc/Nu's dir prefixed to them
         ;; and are automatically loaded when Arc/Nu
