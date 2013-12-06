@@ -1101,6 +1101,7 @@
                  (debug?            debug)
                  (exec-dir          dir)
                  (import-dirs       (list ;(path->string (current-directory)) ; TODO
+                                          ; TODO it should recursively search all folders in lib
                                           (path->string (build-path dir "lib"))
                                           (path->string (build-path dir "lib/arc3.1"))
                                           (path->string dir)

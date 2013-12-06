@@ -19,13 +19,14 @@ rem  a longer terminal session, so that when we exit Arc and return to
 rem  the command prompt we're in the same directory we left.
 pushd .
 
+rem  Time to actually execute Arc
 rem  http://stackoverflow.com/questions/3827567/how-to-get-the-path-of-the-batch-script-in-windows
-rem  Actually executes Arc
 echo "%~dp0arc"
 echo "%ProgramFiles%\Racket\Racket.exe"
 echo "%ProgramFiles(x86)%\Racket\Racket.exe"
 
 rem  This is so it will work on both 64-bit and 32-bit systems
+rem  http://stackoverflow.com/a/15060386/449477
 IF NOT EXISTS "%ProgramFiles%\Racket\Racket.exe" GOTO win64
 "%ProgramFiles%\Racket\Racket.exe" "%~dp0arc"
 :win64
