@@ -25,6 +25,8 @@ pushd .
 ::  Actually executes Arc
 for %i in (Racket.exe) do @echo. %~$PATH:i
 echo "%~dp0arc"
+echo "%PROGRAMFILES%\Racket\Racket.exe"
+echo "%PROGRAMFILES(x86)%\Racket\Racket.exe"
 Racket.exe "%~dp0arc"
 
 ::  The "pause" command displays a "press any key" message. If Racket
