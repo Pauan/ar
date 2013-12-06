@@ -25,7 +25,7 @@ pushd .
 ::  Actually executes Arc
 for %i in (Racket.exe) do @echo. %~$PATH:i
 echo "%~dp0arc"
-racket "%~dp0arc"
+Racket.exe "%~dp0arc"
 
 ::  The "pause" command displays a "press any key" message. If Racket
 ::  exits with an error, this command keeps the batch script running
