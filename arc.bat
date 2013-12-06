@@ -23,9 +23,9 @@ rem  http://stackoverflow.com/questions/3827567/how-to-get-the-path-of-the-batch
 rem  Actually executes Arc
 rem  for %i in (Racket.exe) do @echo. %~$PATH:i
 echo "%~dp0arc"
-echo "%PROGRAMFILES%\Racket\Racket.exe"
-echo "%PROGRAMFILES(x86)%\Racket\Racket.exe"
-"%PROGRAMFILES(x86)%\Racket\Racket.exe" "%~dp0arc"
+echo "%ProgramFiles%\Racket\Racket.exe"
+echo "%ProgramFiles(x86)%\Racket\Racket.exe"
+"%ProgramFiles(x86)%\Racket\Racket.exe" "%~dp0arc"
 
 rem  The "pause" command displays a "press any key" message. If Racket
 rem  exits with an error, this command keeps the batch script running
