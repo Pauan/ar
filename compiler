@@ -908,6 +908,7 @@
     #f))
 
 (define (set-name n v)
+  (displayln (globals))
   (set-raw n (nameit n v)))
 
 (define (w/-maker body f)
@@ -1109,7 +1110,6 @@
                  (locals            (hasheq))
                  (procedure-var     (hasheq))
                  (uniq-counter      1))
-    (displayln (globals))
     ;(init)
     (parameterize ((orig-globals (globals)))
       (ac-lang lang (lambda ()

@@ -1,4 +1,4 @@
-rem  @echo off
+@echo off
 
 rem  Blatantly stolen and modified from https://gist.github.com/rocketnia/576688
 
@@ -21,11 +21,11 @@ pushd .
 
 rem  http://stackoverflow.com/questions/3827567/how-to-get-the-path-of-the-batch-script-in-windows
 rem  Actually executes Arc
-rem  for %i in (Racket.exe) do @echo. %~$PATH:i
 echo "%~dp0arc"
 echo "%ProgramFiles%\Racket\Racket.exe"
 echo "%ProgramFiles(x86)%\Racket\Racket.exe"
 
+rem  This is so it will work on both 64-bit and 32-bit systems
 IF EXISTS "%ProgramFiles%\Racket\Racket.exe" (
   "%ProgramFiles%\Racket\Racket.exe" "%~dp0arc"
 ) ELSE (
