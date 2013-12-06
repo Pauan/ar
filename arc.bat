@@ -21,9 +21,6 @@ pushd .
 
 rem  Time to actually execute Arc
 rem  http://stackoverflow.com/questions/3827567/how-to-get-the-path-of-the-batch-script-in-windows
-echo "%~dp0arc"
-echo "%ProgramFiles%\Racket\Racket.exe"
-echo "%ProgramFiles(x86)%\Racket\Racket.exe"
 
 rem  This is so it will work on both 64-bit and 32-bit systems
 rem  http://stackoverflow.com/a/15060386/449477
@@ -32,6 +29,8 @@ rem  IF NOT "%ProgFiles86Root%"=="" GOTO amd64
 rem  SET ProgFiles86Root="%ProgramFiles%"
 rem  :amd64
 rem  "%ProgFiles86Root%\Racket\Racket.exe" "%~dp0arc"
+echo "%ProgramFiles(x86)%\Racket\Racket.exe"
+rem   echo "%ProgFiles86Root%\Racket\Racket.exe"
 "%ProgramFiles(x86)%\Racket\Racket.exe" "%~dp0arc"
 
 rem  The "pause" command displays a "press any key" message. If Racket
