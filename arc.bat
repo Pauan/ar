@@ -25,7 +25,12 @@ rem  for %i in (Racket.exe) do @echo. %~$PATH:i
 echo "%~dp0arc"
 echo "%ProgramFiles%\Racket\Racket.exe"
 echo "%ProgramFiles(x86)%\Racket\Racket.exe"
-"%ProgramFiles(x86)%\Racket\Racket.exe" "%~dp0arc"
+
+IF EXISTS "%ProgramFiles%\Racket\Racket.exe" (
+  "%ProgramFiles%\Racket\Racket.exe" "%~dp0arc"
+) ELSE (
+  "%ProgramFiles(x86)%\Racket\Racket.exe" "%~dp0arc"
+)
 
 rem  The "pause" command displays a "press any key" message. If Racket
 rem  exits with an error, this command keeps the batch script running
