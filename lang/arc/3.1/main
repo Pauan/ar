@@ -4,6 +4,10 @@
 
 (require "../../../compiler")
 
+(display 2)
+(display " ")
+(displayln (globals))
+
 (require ffi/unsafe)
 (require racket/unsafe/ops)
 (require racket/tcp)
@@ -423,6 +427,10 @@
 ;=============================================================================
 ;  New macros
 ;=============================================================================
+(display 3)
+(display " ")
+(displayln (globals))
+
 (mac % args (% args))
 (mac w/include (x . body) (w/include x body))
 (mac w/exclude (x . body) (w/exclude x body))
