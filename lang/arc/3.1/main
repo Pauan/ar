@@ -4,10 +4,6 @@
 
 (require "../../../compiler")
 
-(display 2)
-(display " ")
-(displayln (globals))
-
 (require ffi/unsafe)
 (require racket/unsafe/ops)
 (require racket/tcp)
@@ -196,9 +192,9 @@
                      (if (eqv? (car tok) #\~)
                          (if (null? (cdr tok))
                              ; TODO ->orig-box
-                             (->box 'no)
+                             'no
                                    ; TODO ->orig-box
-                             (list (->box 'complement) (chars->value (cdr tok))))
+                             (list 'complement (chars->value (cdr tok))))
                          (chars->value tok)))
                    (tokens (lambda (c) (eqv? c #\:))
                            (symbol->chars sym)
@@ -208,7 +204,7 @@
     (if (null? (cdr elts))
         (car elts)
               ; TODO ->orig-box
-        (cons (->box 'compose) elts))))
+        (cons 'compose elts))))
 
 (define (build-sexpr toks orig)
   (cond ((null? toks)
@@ -235,7 +231,7 @@
     (if (null? (cdr elts))
         (car elts)
               ; TODO ->orig-box
-        (cons (->box 'andf) elts))))
+        (cons 'andf elts))))
 
 (define (expand-sexpr sym)
   (build-sexpr (reverse (tokens (lambda (c) (or (eqv? c #\.) (eqv? c #\!)))
@@ -270,10 +266,10 @@
 (define (de-andf f args)
   (let ((gs (map (lambda (x) (gensym)) args)))
         ; TODO ->orig-box
-    `((,(->box 'fn) ,gs
+    `((fn ,gs
           ; TODO ->orig-box
-        (,(->box 'and) ,@(map (lambda (f) (cons f gs))
-                                (cdr f))))
+        (and ,@(map (lambda (f) (cons f gs))
+                    (cdr f))))
       ,@args)))
 
 (ac-mac-call (lambda (c f args done)
@@ -283,7 +279,7 @@
         ; TODO orig-box?
         ((eq? c 'complement)
                     ; TODO ->orig-box
-          (ac (list (->box 'no) (cons (cadr f) args))))
+          (ac (list 'no (cons (cadr f) args))))
         ; TODO orig-box?
         ((eq? c 'andf)
           (ac (de-andf f args)))
@@ -427,10 +423,6 @@
 ;=============================================================================
 ;  New macros
 ;=============================================================================
-(display 3)
-(display " ")
-(displayln (globals))
-
 (mac % args (% args))
 (mac w/include (x . body) (w/include x body))
 (mac w/exclude (x . body) (w/exclude x body))
@@ -446,7 +438,7 @@
 ;=============================================================================
 (mac square-brackets (body)
      ; TODO ->orig-box
-  `(,(->box 'fn) (_) ,body))
+  `(fn (_) ,body))
 
 (mac if args
   (ac-if args))
