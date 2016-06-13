@@ -621,8 +621,8 @@
 (def system (command) (system command) nil)
 (def rmfile (path)    (delete-file path) nil)
 
-(def file-exists (x) (tnil (file-exists? x)))
-(def dir-exists  (x) (tnil (directory-exists? x)))
+(def file-exists (x) (if (file-exists? x) x nil))
+(def dir-exists  (x) (if (directory-exists? x) x nil))
 
 ;; TODO: better dir
 (def dir (name)
