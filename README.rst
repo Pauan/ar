@@ -3,7 +3,7 @@ How to install
 
 ::
 
-  git clone --recursive https://github.com/arclanguage/arc-nu.git arc-nu
+  git clone https://github.com/arclanguage/arc-nu.git
 
 You also need `Racket <http://racket-lang.org/>`_.
 

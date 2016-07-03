@@ -1,3 +1,0 @@
-[submodule "lib/nuit"]
-	path = lib/nuit
-	url = git://github.com/Pauan/nuit.git
