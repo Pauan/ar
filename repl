@@ -31,7 +31,7 @@
   (let repl ()
     ;; This causes Ctrl+C to return to the REPL, rather than aborting.
     ;; Technique was taken from Racket's (read-eval-print-loop) which
-    ;; I found in /usr/share/racket/collects/racket/private/misc.ss
+    ;; I found in /usr/share/racket/collects/racket/private/misc.rkt
     (call-with-continuation-prompt
       (lambda ()
         (let ((expr (if interactive
@@ -46,16 +46,18 @@
                 (newline))
               (begin (call-with-values
                        (lambda ()
-                         (with-handlers ((exn:fail? print-err))
-                           (eval (ac expr))))
+                         (call-with-continuation-prompt
+                           (lambda ()
+                             (with-handlers ((exn:fail? print-err))
+                               (eval (ac expr))))))
                        (lambda results
                          (when interactive
                            (for ((x results))
                              (unless (void? x)
                                (print write x (current-output-port))))
-                           ;(for-each (current-print) results) TODO use current-print
+                           ;(for-each (current-print) results) ; TODO use current-print
                            )))
                      ;; Abort to loop. (Calling `repl' directly would not be a tail call.)
                      (abort-current-continuation (default-continuation-prompt-tag))))))
       (default-continuation-prompt-tag)
-      (lambda () (repl)))))
+      (lambda args (repl)))))
