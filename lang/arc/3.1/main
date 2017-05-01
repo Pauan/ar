@@ -598,8 +598,12 @@
 ;; thanks, Eli!
 ;;
 ;; Currently only used by srv.arc
-;; TODO does this break on Windows ?
-(assign setuid #:sig (i) (get-ffi-obj 'setuid #f (_fun _int -> _int)))
+(assign setuid #:sig (i)
+  (get-ffi-obj 'setuid #f (_fun _int -> _int)
+    ; If we're on Windows, there is no setuid, so we make a dummy
+    ; version. See "Arc 3.1 setuid problem on Windows,"
+    ; http://arclanguage.org/item?id=10625.
+    (lambda () (lambda (x) 'nil))))
 
 ;: TODO: need to use a better seed (Arc 3.1???)
 (assign rand                         #:sig ((o n) (o gen)) random)

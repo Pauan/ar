@@ -1,7 +1,6 @@
 #lang racket/base
 
 (require (only-in "compiler" debug? globals ac-read ac print))
-(require readline/readline)
 
 ; TODO test that everything works
 
@@ -15,7 +14,9 @@
           ;; http://arclanguage.org/item?id=10344
           (displayln msg (current-error-port)))))
 
-  (when interactive
+  (when (and interactive (not (eq? 'windows (system-type))))
+    (define set-completion-function!
+      (dynamic-require 'readline/readline 'set-completion-function!))
     (dynamic-require 'readline/rep-start #f)
     (set-completion-function!
       (lambda (s)
