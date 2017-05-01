@@ -248,6 +248,49 @@
       x)))
 
 ;=============================================================================
+;  Quasiquotation
+;=============================================================================
+
+(define (ac-qq args)
+  (ac-qq-not-splicing 1 args ",@ cannot be used immediately after `"))
+
+; process the argument of a quasiquote. keep track of
+; depth of nesting. handle unquote only at top level (level = 1).
+; complete form, e.g. x or (fn x) or (unquote (fn x))
+
+(define (ac-qq-not-splicing level x message)
+  (cond ((and (pair? x) (eq? (car x) 'unquote))
+         (if (= level 1)
+             (cadr x)
+             (list cons (bypass ''unquote)
+                        (ac-qq-splicing (- level 1) (cadr x)))))
+        ((and (pair? x) (eq? (car x) 'unquote-splicing))
+         (error message))
+        ((and (pair? x) (eq? (car x) 'quasiquote))
+         (list list (bypass ''quasiquote)
+                    (ac-qq-not-splicing (+ level 1) (cadr x)
+                       ",@ cannot be used immediately after `")))
+        ((pair? x)
+         (list append (ac-qq-splicing level (car x))
+                      (ac-qq-not-splicing level (cdr x)
+                                          "cannot use ,@ after .")))
+        ((symbol? x)
+         (if (and (= level 1) (hygienic-macros?))
+             (if (global? x)
+                 (bypass (->box x))
+                 (->box x))
+             (bypass (list 'quote (sym->nil x)))))
+        (else (bypass (list 'quote x)))))
+
+(define (ac-qq-splicing level x)
+  (cond ((and (pair? x) (eq? (car x) 'unquote-splicing))
+         (if (= level 1)
+             (cadr x)
+             (list list (list cons (bypass ''unquote-splicing)
+                                   (ac-qq-splicing (- level 1) (cadr x))))))
+        (else (list list (ac-qq-not-splicing level x "")))))
+
+;=============================================================================
 ;  Macro/function stuff
 ;=============================================================================
 ;; the next two are optimizations, except work for macros.
@@ -441,7 +484,7 @@
   (ac-fn parms body))
 
 (mac quasiquote (x)
-  (ac-quasiquote x))
+  (ac-qq x))
 
 (mac assign (x . rest)
   (ac-assign (cons x rest) "assign"))
