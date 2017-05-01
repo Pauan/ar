@@ -393,7 +393,11 @@
         ; make it also work for uncompressed calls to compose
         (and (acons expr) (metafn (car expr)))
          (setforms (expand-metafn-call (ssexpand (car expr)) (cdr expr)))
-        (and (acons expr) (acons (car expr)) (is (caar expr) 'get))
+        (and (acons expr)
+             (acons (car expr))
+             ; TODO: Do we already have a better way to access
+             ; %.->box!get than this, without dropping to Racket?
+             (is (caar expr) (car:ssexpand '!a)))
          (setforms (list (cadr expr) (cadr (car expr))))
          (let f (setter (car expr))
            (if f
