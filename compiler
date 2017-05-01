@@ -606,7 +606,7 @@
           (lambda ()
             (parameterize ((current-load-relative-directory (path-only path))
                            (filename (path->string path)))
-              (namespace-require path)
+              (load path)
               (let ((y (current-parameterization)))
                 (hash-set! x path y)
                 (call-with-parameterization y f)))))))))
